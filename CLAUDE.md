@@ -77,40 +77,37 @@ The working directory is intended to be:
 - Encountered and resolved a Uvicorn error caused by Python being unable to import the `main` module.
 - The FastAPI development server is now running successfully.
 
-The initial endpoint is intended to be:
+### Milestone 1 complete (2026-10-21): first endpoints, tests, first commit
 
-`GET /`
+- `backend/main.py` exposes `GET /` → `{"message": "Trading Platform API is running"}` and `GET /health` → `{"status": "ok"}`.
+- `backend/test_main.py` tests both endpoints with FastAPI's `TestClient`.
+- The dev dependency `httpx` was replaced with `httpx2`, because Starlette 1.9's test client deprecates `httpx`.
+- A root `.gitignore` ignores `.venv/`, `__pycache__/`, `.pytest_cache/`, `.ruff_cache/`, `.DS_Store`, and `.env`.
+- Git author email configured; first commits made on `main` (no remote yet).
+- `main.py` still sits at the root of `backend/`, outside the `src/backend/` package that `uv init` created. Moving it into the package is a later lesson.
 
-Expected JSON response:
-
-```json
-{
-  "message": "Trading Platform API is running"
-}
-```
-
-The application should expose interactive API documentation at `/docs`.
+Concepts covered: pytest discovery and `assert`, reading pytest diffs, TDD red/green, decorators as route registration, `async def` vs `def` in FastAPI (intro), Ruff `check` vs `format`, import grouping (I001), `.gitignore` patterns and `git check-ignore`, `git commit --amend`.
 
 Check the actual source files before assuming their contents match this description.
 
+## Pre-commit checklist
+
+Run from the repo root before every commit:
+
+```bash
+uv run --directory backend ruff format --check .
+uv run --directory backend ruff check .
+uv run --directory backend pytest -q
+```
+
 ## Immediate next steps
 
-1. Inspect `backend/main.py`, `backend/pyproject.toml`, and the current project tree.
-2. Verify the root endpoint works at `http://127.0.0.1:8000/`.
-3. Create `backend/test_main.py` if it does not already exist.
-4. Add a test for the root endpoint using FastAPI's `TestClient`.
-5. Add `GET /health`, returning `{"status": "ok"}`, and write a test for it.
-6. Run:
+Lesson 2: FastAPI routing, path and query parameters, and HTTP status codes.
 
-   ```bash
-   uv run pytest -v
-   uv run ruff check .
-   ```
-
-   Run these commands from the `backend` directory.
-
-7. Fix any failures and explain the underlying cause.
-8. Commit the working milestone to Git after reviewing the changes.
+1. Add `GET /prices/{symbol}` returning a simulated price for a small hard-coded set of symbols.
+2. Return `404` with a clear error for unknown symbols (`HTTPException`).
+3. Explore a query parameter (e.g. `?currency=`) and FastAPI's automatic validation (`422`).
+4. Write tests for success, 404, and 422 cases.
 
 ## Longer-term roadmap
 
