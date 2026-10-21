@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import FastAPI, HTTPException
 
 app = FastAPI(title="Trading Platform API")
@@ -7,6 +9,8 @@ prices = {
     "GOOGL": 2800.0,
     "AMZN": 3400.0,
 }
+
+USD_TO_GBP_RATE = 0.79  # Example conversion rate from USD to GBP
 
 
 @app.get("/")
@@ -20,10 +24,13 @@ async def health_check():
 
 
 @app.get("/prices/{symbol}")
-async def get_price(symbol: str):
+async def get_price(symbol: str, currency: Literal["USD", "GBP"] = "USD"):
     symbol = symbol.upper()
     price = prices.get(symbol)
 
     if price is None:
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
-    return {"symbol": symbol, "price": price}
+
+    if currency == "GBP":
+        price *= USD_TO_GBP_RATE
+    return {"symbol": symbol, "price": round(price, 2), "currency": currency}
