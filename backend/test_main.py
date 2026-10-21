@@ -51,5 +51,4 @@ def test_get_price_with_currency_parameter_gbp():
 def test_get_price_with_invalid_currency_parameter_jpy():
     response = client.get("/prices/AAPL?currency=JPY")
     assert response.status_code == 422
-    print(response.json())
     assert response.json()["detail"][0]["loc"] == ["query", "currency"]

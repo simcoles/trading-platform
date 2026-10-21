@@ -88,6 +88,19 @@ The working directory is intended to be:
 
 Concepts covered: pytest discovery and `assert`, reading pytest diffs, TDD red/green, decorators as route registration, `async def` vs `def` in FastAPI (intro), Ruff `check` vs `format`, import grouping (I001), `.gitignore` patterns and `git check-ignore`, `git commit --amend`.
 
+### Milestone 2 complete (2026-10-21): path/query parameters and status codes
+
+- `GET /prices/{symbol}` looks up a hard-coded `prices` dict (case-insensitive) and returns `{"symbol", "price", "currency"}`.
+- Unknown symbols raise `HTTPException(404, detail="Symbol XYZ not found")`.
+- The `currency: Literal["USD", "GBP"] = "USD"` query parameter converts with the constant `USD_TO_GBP_RATE = 0.79` and `round(price, 2)`. Any other value returns `422`.
+- Tests cover success, case-insensitivity, the USD default, GBP conversion, 404, and 422 (asserting `loc == ["query", "currency"]`). 8 tests in total.
+- `backend/pyproject.toml` has `[tool.ruff] src = ["."]`, so import sorting agrees whether Ruff runs from the repo root (VS Code) or `backend/`.
+- `.vscode/settings.json` (Ruff as the formatter, format on save) is committed.
+- Lesson 3 (in progress): `PriceResponse(BaseModel)` and the `Currency = Literal["USD", "GBP"]` alias. `/prices/{symbol}` uses `response_model=PriceResponse` and returns a model instance.
+- `.vscode/settings.json` points Pylance at `backend/.venv`, sets `typeCheckingMode: "standard"`, and adds `extraPaths: ["backend"]`, so type errors (e.g. unknown model fields) show in the editor.
+
+Concepts covered: path parameters and runtime type-hint conversion, query parameters and defaults, `Literal` as a string union, `HTTPException`/`raise`, f-strings, `dict.get` and `is None`, guard clauses, float precision and `round` (`Decimal` deferred to orders), FastAPI ignoring unknown query params, the structure of a 422 body, and avoiding tests that copy the implementation.
+
 Check the actual source files before assuming their contents match this description.
 
 ## Pre-commit checklist
@@ -102,12 +115,11 @@ uv run --directory backend pytest -q
 
 ## Immediate next steps
 
-Lesson 2: FastAPI routing, path and query parameters, and HTTP status codes.
+Lesson 3: Pydantic models.
 
-1. Add `GET /prices/{symbol}` returning a simulated price for a small hard-coded set of symbols.
-2. Return `404` with a clear error for unknown symbols (`HTTPException`).
-3. Explore a query parameter (e.g. `?currency=`) and FastAPI's automatic validation (`422`).
-4. Write tests for success, 404, and 422 cases.
+1. Define a `PriceResponse(BaseModel)` and use it as the `/prices/{symbol}` response model. Check how it appears in `/docs`.
+2. Add `GET /prices` listing all symbols, returning `list[PriceResponse]`.
+3. Introduce a request body: a `POST` endpoint that validates its input with a Pydantic model (e.g. a simulated order with `symbol`, `side`, and `quantity > 0`). Test valid input and 422 cases.
 
 ## Longer-term roadmap
 

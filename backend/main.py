@@ -1,6 +1,7 @@
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 app = FastAPI(title="Trading Platform API")
 
@@ -11,6 +12,14 @@ prices = {
 }
 
 USD_TO_GBP_RATE = 0.79  # Example conversion rate from USD to GBP
+
+Currency = Literal["USD", "GBP"]
+
+
+class PriceResponse(BaseModel):
+    symbol: str
+    price: float
+    currency: Currency
 
 
 @app.get("/")
@@ -23,8 +32,8 @@ async def health_check():
     return {"status": "ok"}
 
 
-@app.get("/prices/{symbol}")
-async def get_price(symbol: str, currency: Literal["USD", "GBP"] = "USD"):
+@app.get("/prices/{symbol}", response_model=PriceResponse)
+async def get_price(symbol: str, currency: Currency = "USD"):
     symbol = symbol.upper()
     price = prices.get(symbol)
 
@@ -33,4 +42,4 @@ async def get_price(symbol: str, currency: Literal["USD", "GBP"] = "USD"):
 
     if currency == "GBP":
         price *= USD_TO_GBP_RATE
-    return {"symbol": symbol, "price": round(price, 2), "currency": currency}
+    return PriceResponse(symbol=symbol, price=round(price, 2), currency=currency)
