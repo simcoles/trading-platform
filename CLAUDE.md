@@ -99,6 +99,16 @@ Concepts covered: pytest discovery and `assert`, reading pytest diffs, TDD red/g
 - Lesson 3 (in progress): `PriceResponse(BaseModel)` and the `Currency = Literal["USD", "GBP"]` alias. `/prices/{symbol}` uses `response_model=PriceResponse` and returns a model instance.
 - `GET /prices?currency=` returns `list[PriceResponse]` built with a list comprehension. Conversion and rounding are extracted into `convert_price(price, currency) -> float`, shared by both endpoints. 11 tests.
 - Git lesson: undoing an accidental unpushed commit with `git reset --soft HEAD~1`.
+
+### Milestone 3 complete (2026-10-22): Pydantic models and request bodies
+
+- `POST /orders` (simulated, nothing stored) takes `OrderRequest` (`symbol`, `side: Side = Literal["buy", "sell"]`, `quantity: int = Field(gt=0)`) and returns `OrderResponse` (adds `price` and `total`) with status `201`.
+- Shared helpers: `get_price_or_404(symbol)`, `convert_price(price, currency)` (always rounds to 2 decimal places), and `calculate_total(price, quantity)` (rounds to 2 decimal places).
+- 20 tests: integration tests via `TestClient`, unit tests for the helpers, and `@pytest.mark.parametrize` for invalid quantities.
+- VS Code organises imports on save (`source.organizeImports.ruff`). Format-on-save alone does not sort imports.
+- Prices are `float` with rounding at the edges. Switch to `decimal.Decimal` when orders are persisted.
+
+Concepts covered: `BaseModel`, `response_model`, model instances vs dicts (errors surface at the line that caused them), type aliases, `list[T]`, list comprehensions, `dict.items()` unpacking, `all()`/`any()`, `-> T` return types, request bodies, `Field` constraints, 201 vs 200, the 422 list `detail` vs the `HTTPException` string `detail`, `parametrize` (like `test.each`), `pytest -k`, unit vs integration tests, choosing test inputs that exercise rounding, Python indentation as syntax, and Pylance `typeCheckingMode`.
 - `.vscode/settings.json` points Pylance at `backend/.venv`, sets `typeCheckingMode: "standard"`, and adds `extraPaths: ["backend"]`, so type errors (e.g. unknown model fields) show in the editor.
 
 Concepts covered: path parameters and runtime type-hint conversion, query parameters and defaults, `Literal` as a string union, `HTTPException`/`raise`, f-strings, `dict.get` and `is None`, guard clauses, float precision and `round` (`Decimal` deferred to orders), FastAPI ignoring unknown query params, the structure of a 422 body, and avoiding tests that copy the implementation.
@@ -117,11 +127,12 @@ uv run --directory backend pytest -q
 
 ## Immediate next steps
 
-Lesson 3: Pydantic models.
+Lesson 4: Organising code into modules and routers.
 
-1. ~~Define `PriceResponse` and use it as the response model.~~ Done.
-2. ~~Add `GET /prices` returning `list[PriceResponse]`.~~ Done. Optional follow-up: make `convert_price` always round, and add unit tests that call it directly.
-3. Introduce a request body: a `POST` endpoint that validates its input with a Pydantic model (e.g. a simulated order with `symbol`, `side`, and `quantity > 0`). Test valid input and 422 cases.
+1. Python modules and packages: how `import` resolves, `__init__.py`, absolute imports.
+2. Move the app into the `src/backend/` package (or a chosen layout), splitting models, helpers, and routes into separate modules.
+3. Use FastAPI's `APIRouter` to group the `/prices` and `/orders` routes.
+4. Move the tests into a `tests/` directory. Keep all 20 tests passing throughout; this is a refactor.
 
 ## Longer-term roadmap
 
