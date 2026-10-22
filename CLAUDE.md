@@ -115,6 +115,44 @@ Concepts covered: path parameters and runtime type-hint conversion, query parame
 
 Check the actual source files before assuming their contents match this description.
 
+### Milestone 4 complete (2026-10-22): modules, routers, and test fixtures
+
+Current backend layout:
+
+```text
+backend/
+├── pyproject.toml         # [tool.ruff] src = ["src"]
+├── src/backend/           # installed in editable mode by uv (backend.pth), so `import backend` works from any folder
+│   ├── main.py            # app, include_router calls, / and /health
+│   ├── models.py          # Currency, Side, PriceResponse, OrderRequest, OrderResponse
+│   ├── pricing.py         # prices data, convert_price, calculate_total, get_price_or_404
+│   └── routers/
+│       ├── prices.py      # APIRouter(prefix="/prices")
+│       └── orders.py      # APIRouter(prefix="/orders")
+└── tests/
+    ├── conftest.py        # `client` fixture
+    ├── test_root.py
+    ├── test_prices.py
+    ├── test_orders.py
+    └── test_pricing.py    # unit tests, no client
+```
+
+- 20 tests, unchanged in behaviour through the whole refactor.
+- The `uv init` placeholder `main()` and `[project.scripts]` were removed. Pylance `extraPaths` is no longer needed.
+- Known coupling to fix later: `pricing.py` raises FastAPI's `HTTPException`. Replace it with a custom domain exception that the routes translate into a 404.
+
+Concepts covered: `sys.path` and how imports resolve, editable installs (`.pth`, like `npm link`), packages and `__init__.py`, absolute imports, one-way import direction to avoid circular imports, importing names from the module that defines them (Python has no `export`), `APIRouter` prefixes (full path = prefix + route path; use `""` not `"/"`), `git mv` to keep history, pytest fixtures (dependency injection by parameter name, `yield` for teardown), `conftest.py`, and `pytest --collect-only`.
+
+## Running the app
+
+From any folder:
+
+```bash
+uv run --project ~/Projects/trading-platform/backend uvicorn backend.main:app --reload
+```
+
+Docs at http://127.0.0.1:8000/docs.
+
 ## Pre-commit checklist
 
 Run from the repo root before every commit:
@@ -127,12 +165,11 @@ uv run --directory backend pytest -q
 
 ## Immediate next steps
 
-Lesson 4: Organising code into modules and routers.
+Lesson 5: Error handling and in-memory state.
 
-1. Python modules and packages: how `import` resolves, `__init__.py`, absolute imports.
-2. Move the app into the `src/backend/` package (or a chosen layout), splitting models, helpers, and routes into separate modules.
-3. Use FastAPI's `APIRouter` to group the `/prices` and `/orders` routes.
-4. Move the tests into a `tests/` directory. Keep all 20 tests passing throughout; this is a refactor.
+1. Custom exceptions: define `UnknownSymbolError` in the domain code, and register a FastAPI exception handler that turns it into a 404 (removes the `HTTPException` coupling from `pricing.py`).
+2. A simulated watchlist held in memory: `GET /watchlist`, `POST /watchlist` (201, 409 for duplicates), `DELETE /watchlist/{symbol}` (204, 404).
+3. Test isolation: a fixture that resets in-memory state between tests, using `yield`.
 
 ## Longer-term roadmap
 
