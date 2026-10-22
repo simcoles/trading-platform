@@ -1,57 +1,9 @@
-from typing import Literal
+from fastapi import FastAPI
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from backend.models import Currency, OrderRequest, OrderResponse, PriceResponse
+from backend.pricing import calculate_total, convert_price, get_price_or_404, prices
 
 app = FastAPI(title="Trading Platform API")
-
-prices = {
-    "AAPL": 150.0,
-    "GOOGL": 2800.0,
-    "AMZN": 3400.0,
-}
-
-USD_TO_GBP_RATE = 0.79  # Example conversion rate from USD to GBP
-
-Currency = Literal["USD", "GBP"]
-Side = Literal["buy", "sell"]
-
-
-def convert_price(price: float, currency: Currency) -> float:
-    if currency == "GBP":
-        price = price * USD_TO_GBP_RATE
-    return round(price, 2)
-
-
-def get_price_or_404(symbol: str) -> float:
-    price = prices.get(symbol)
-    if price is None:
-        raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
-    return price
-
-
-def calculate_total(price: float, quantity: int) -> float:
-    return round(price * quantity, 2)
-
-
-class PriceResponse(BaseModel):
-    symbol: str
-    price: float
-    currency: Currency
-
-
-class OrderRequest(BaseModel):
-    symbol: str
-    quantity: int = Field(gt=0)
-    side: Side
-
-
-class OrderResponse(BaseModel):
-    symbol: str
-    quantity: int
-    side: Side
-    price: float
-    total: float
 
 
 @app.get("/")
