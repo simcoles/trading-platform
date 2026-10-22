@@ -119,7 +119,6 @@ def test_create_order_sell():
 
 
 def test_create_order_unknown_symbol_returns_404():
-    # TODO: post an order for a symbol not in prices
     response = client.post(
         "/orders", json={"symbol": "INVALID", "quantity": 10, "side": "buy"}
     )
@@ -137,7 +136,6 @@ def test_create_order_invalid_quantity_returns_422(quantity):
 
 
 def test_create_order_invalid_side_returns_422():
-    # TODO: post an order with side "hold"
     response = client.post(
         "/orders", json={"symbol": "AAPL", "quantity": 10, "side": "hold"}
     )
