@@ -1,6 +1,7 @@
+import pytest
 from fastapi.testclient import TestClient
 
-from main import app, convert_price
+from main import app, calculate_total, convert_price
 
 client = TestClient(app)
 
@@ -86,3 +87,64 @@ def test_convert_price_rounds_usd():
 def test_convert_price_rounds_gbp():
     # 100.323 * 0.79 = 79.25517 -> rounded to 79.26
     assert convert_price(100.323, "GBP") == 79.26
+
+
+def test_create_order_buy():
+    response = client.post(
+        "/orders", json={"symbol": "aapl", "quantity": 10, "side": "buy"}
+    )
+    assert response.status_code == 201
+    assert response.json() == {
+        "symbol": "AAPL",
+        "quantity": 10,
+        "side": "buy",
+        "price": 150.0,
+        "total": 1500.0,
+    }
+
+
+def test_create_order_sell():
+    response = client.post(
+        "/orders", json={"symbol": "googl", "quantity": 10, "side": "sell"}
+    )
+    assert response.status_code == 201
+    assert response.json() == {
+        "symbol": "GOOGL",
+        "quantity": 10,
+        "side": "sell",
+        "price": 2800.0,
+        "total": 28000.0,
+    }
+
+
+def test_create_order_unknown_symbol_returns_404():
+    # TODO: post an order for a symbol not in prices
+    response = client.post(
+        "/orders", json={"symbol": "INVALID", "quantity": 10, "side": "buy"}
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Symbol INVALID not found"}
+
+
+@pytest.mark.parametrize("quantity", [0, -5])
+def test_create_order_invalid_quantity_returns_422(quantity):
+    response = client.post(
+        "/orders", json={"symbol": "AAPL", "quantity": quantity, "side": "buy"}
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "quantity"]
+
+
+def test_create_order_invalid_side_returns_422():
+    # TODO: post an order with side "hold"
+    response = client.post(
+        "/orders", json={"symbol": "AAPL", "quantity": 10, "side": "hold"}
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "side"]
+
+
+def test_calculate_total():
+    assert calculate_total(100.0, 5) == 500.0
+    assert calculate_total(99.99, 3) == 299.97
+    assert calculate_total(0.0, 10) == 0.0
