@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from main import app, convert_price
 
 client = TestClient(app)
 
@@ -76,3 +76,13 @@ def test_list_prices_invalid_currency_returns_422():
     response = client.get("/prices?currency=JPY")
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["query", "currency"]
+
+
+def test_convert_price_rounds_usd():
+    # No conversion for USD
+    assert convert_price(100.323, "USD") == 100.32
+
+
+def test_convert_price_rounds_gbp():
+    # 100.323 * 0.79 = 79.25517 -> rounded to 79.26
+    assert convert_price(100.323, "GBP") == 79.26

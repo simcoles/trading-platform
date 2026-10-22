@@ -18,8 +18,8 @@ Currency = Literal["USD", "GBP"]
 
 def convert_price(price: float, currency: Currency) -> float:
     if currency == "GBP":
-        return round(price * USD_TO_GBP_RATE, 2)
-    return price
+        price = price * USD_TO_GBP_RATE
+    return round(price, 2)
 
 
 class PriceResponse(BaseModel):
