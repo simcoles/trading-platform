@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, calculate_total, convert_price
+from backend.main import app, calculate_total, convert_price
 
 client = TestClient(app)
 

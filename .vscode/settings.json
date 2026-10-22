@@ -7,6 +7,5 @@
     }
   },
   "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
-  "python.analysis.typeCheckingMode": "standard",
-  "python.analysis.extraPaths": ["backend"]
+  "python.analysis.typeCheckingMode": "standard"
 }
