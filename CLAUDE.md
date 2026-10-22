@@ -97,6 +97,8 @@ Concepts covered: pytest discovery and `assert`, reading pytest diffs, TDD red/g
 - `backend/pyproject.toml` has `[tool.ruff] src = ["."]`, so import sorting agrees whether Ruff runs from the repo root (VS Code) or `backend/`.
 - `.vscode/settings.json` (Ruff as the formatter, format on save) is committed.
 - Lesson 3 (in progress): `PriceResponse(BaseModel)` and the `Currency = Literal["USD", "GBP"]` alias. `/prices/{symbol}` uses `response_model=PriceResponse` and returns a model instance.
+- `GET /prices?currency=` returns `list[PriceResponse]` built with a list comprehension. Conversion and rounding are extracted into `convert_price(price, currency) -> float`, shared by both endpoints. 11 tests.
+- Git lesson: undoing an accidental unpushed commit with `git reset --soft HEAD~1`.
 - `.vscode/settings.json` points Pylance at `backend/.venv`, sets `typeCheckingMode: "standard"`, and adds `extraPaths: ["backend"]`, so type errors (e.g. unknown model fields) show in the editor.
 
 Concepts covered: path parameters and runtime type-hint conversion, query parameters and defaults, `Literal` as a string union, `HTTPException`/`raise`, f-strings, `dict.get` and `is None`, guard clauses, float precision and `round` (`Decimal` deferred to orders), FastAPI ignoring unknown query params, the structure of a 422 body, and avoiding tests that copy the implementation.
@@ -117,8 +119,8 @@ uv run --directory backend pytest -q
 
 Lesson 3: Pydantic models.
 
-1. Define a `PriceResponse(BaseModel)` and use it as the `/prices/{symbol}` response model. Check how it appears in `/docs`.
-2. Add `GET /prices` listing all symbols, returning `list[PriceResponse]`.
+1. ~~Define `PriceResponse` and use it as the response model.~~ Done.
+2. ~~Add `GET /prices` returning `list[PriceResponse]`.~~ Done. Optional follow-up: make `convert_price` always round, and add unit tests that call it directly.
 3. Introduce a request body: a `POST` endpoint that validates its input with a Pydantic model (e.g. a simulated order with `symbol`, `side`, and `quantity > 0`). Test valid input and 422 cases.
 
 ## Longer-term roadmap

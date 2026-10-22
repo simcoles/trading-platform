@@ -16,6 +16,12 @@ USD_TO_GBP_RATE = 0.79  # Example conversion rate from USD to GBP
 Currency = Literal["USD", "GBP"]
 
 
+def convert_price(price: float, currency: Currency) -> float:
+    if currency == "GBP":
+        return round(price * USD_TO_GBP_RATE, 2)
+    return price
+
+
 class PriceResponse(BaseModel):
     symbol: str
     price: float
@@ -40,6 +46,15 @@ async def get_price(symbol: str, currency: Currency = "USD"):
     if price is None:
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
 
-    if currency == "GBP":
-        price *= USD_TO_GBP_RATE
-    return PriceResponse(symbol=symbol, price=round(price, 2), currency=currency)
+    price = convert_price(price, currency)
+    return PriceResponse(symbol=symbol, price=price, currency=currency)
+
+
+@app.get("/prices", response_model=list[PriceResponse])
+async def get_prices(currency: Currency = "USD"):
+    return [
+        PriceResponse(
+            symbol=symbol, price=convert_price(price, currency), currency=currency
+        )
+        for symbol, price in prices.items()
+    ]
