@@ -1,4 +1,7 @@
-from backend.pricing import calculate_total, convert_price
+import pytest
+
+from backend.exceptions import UnknownSymbolError
+from backend.pricing import calculate_total, convert_price, look_up_price
 
 
 def test_convert_price_rounds_usd():
@@ -15,3 +18,14 @@ def test_calculate_total():
     assert calculate_total(100.0, 5) == 500.0
     assert calculate_total(99.99, 3) == 299.97
     assert calculate_total(0.0, 10) == 0.0
+
+
+def test_look_up_price_unknown_symbol_raises():
+    with pytest.raises(UnknownSymbolError):
+        look_up_price("INVALID")
+
+
+def test_look_up_price_known_symbols():
+    assert look_up_price("AAPL") == 150.0
+    assert look_up_price("GOOGL") == 2800.0
+    assert look_up_price("AMZN") == 3400.0

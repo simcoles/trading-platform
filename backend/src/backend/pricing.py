@@ -1,5 +1,4 @@
-from fastapi import HTTPException
-
+from backend.exceptions import UnknownSymbolError
 from backend.models import Currency
 
 prices = {
@@ -17,10 +16,10 @@ def convert_price(price: float, currency: Currency) -> float:
     return round(price, 2)
 
 
-def get_price_or_404(symbol: str) -> float:
+def look_up_price(symbol: str) -> float:
     price = prices.get(symbol)
     if price is None:
-        raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found")
+        raise UnknownSymbolError(symbol)
     return price
 
 

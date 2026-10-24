@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from backend.models import Currency, PriceResponse
-from backend.pricing import convert_price, get_price_or_404, prices
+from backend.pricing import convert_price, look_up_price, prices
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/prices", tags=["prices"])
 @router.get("/{symbol}", response_model=PriceResponse)
 async def get_price(symbol: str, currency: Currency = "USD"):
     symbol = symbol.upper()
-    price = get_price_or_404(symbol)
+    price = look_up_price(symbol)
     price = convert_price(price, currency)
     return PriceResponse(symbol=symbol, price=price, currency=currency)
 
