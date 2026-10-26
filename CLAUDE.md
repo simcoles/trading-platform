@@ -143,6 +143,19 @@ backend/
 
 Concepts covered: `sys.path` and how imports resolve, editable installs (`.pth`, like `npm link`), packages and `__init__.py`, absolute imports, one-way import direction to avoid circular imports, importing names from the module that defines them (Python has no `export`), `APIRouter` prefixes (full path = prefix + route path; use `""` not `"/"`), `git mv` to keep history, pytest fixtures (dependency injection by parameter name, `yield` for teardown), `conftest.py`, and `pytest --collect-only`.
 
+### Milestone 5 complete (2026-10-26): custom exceptions and in-memory state
+
+- `exceptions.py` holds the domain errors `UnknownSymbolError`, `SymbolAlreadyInWatchlistError`, and `SymbolNotInWatchlistError`. Handlers in `main.py` map them to 404, 409, and 404 with `{"detail": str(exc)}`. Domain modules (`pricing.py`, `watchlist.py`) have no FastAPI imports.
+- `pricing.get_price_or_404` was renamed to `look_up_price`. It raises `UnknownSymbolError`.
+- `watchlist.py` holds a module-level `_watchlist: set[str]` with `get_watchlist` (sorted list), `add_to_watchlist`, and `remove_from_watchlist`.
+- `routers/watchlist.py`: `GET /watchlist` → `list[str]`; `POST /watchlist` (body `WatchlistItem`) → 201; `DELETE /watchlist/{symbol}` → 204 with no body.
+- `tests/conftest.py` has an `autouse` fixture that calls `clear_watchlist()` before every test. Tests pass alone, reordered, and reversed.
+- 28 tests.
+
+Concepts covered: exception classes (`__init__`, `self`, `super()`), `raise` and `try`/`except` (filtering by type), exceptions travelling up the call stack (no return-code checks), FastAPI `exception_handler` and `JSONResponse`, `pytest.raises` (and `exc_info.value`), `with` context managers, `set` vs `dict` (`set()` vs `{}`), `in`/`not in`, `remove` vs `discard`, built-in types as classes, annotation (`:`) vs assignment (`=`) and chained assignment, query parameter vs body vs path parameter (decided by type and name), 201/204/409 status codes, 204 having no `response_model`, `python -c "import backend.main"` to check that the app loads, order-dependent tests, running single tests and reordered tests, and `autouse` fixtures.
+
+Recurring review points to keep watching: assert `detail` bodies on error tests (a status code alone can pass because of a missing route), make each test set up its own data, check indentation after pasting, and run `git status` before committing.
+
 ## Running the app
 
 From any folder:
@@ -165,11 +178,12 @@ uv run --directory backend pytest -q
 
 ## Immediate next steps
 
-Lesson 5: Error handling and in-memory state.
+Lesson 6: async and WebSockets (roadmap item 6).
 
-1. Custom exceptions: define `UnknownSymbolError` in the domain code, and register a FastAPI exception handler that turns it into a 404 (removes the `HTTPException` coupling from `pricing.py`).
-2. A simulated watchlist held in memory: `GET /watchlist`, `POST /watchlist` (201, 409 for duplicates), `DELETE /watchlist/{symbol}` (204, 404).
-3. Test isolation: a fixture that resets in-memory state between tests, using `yield`.
+1. How `async`/`await` and the event loop work in Python, compared with JS. When `async def` matters in FastAPI and why blocking calls (e.g. `time.sleep`) freeze the server.
+2. A simulated price generator: prices move by a small random amount on an interval.
+3. A `/ws/prices` WebSocket endpoint that streams price updates to connected clients.
+4. Testing WebSockets with `TestClient.websocket_connect`.
 
 ## Longer-term roadmap
 

@@ -24,3 +24,7 @@ class OrderResponse(BaseModel):
     side: Side
     price: float
     total: float
+
+
+class WatchlistItem(BaseModel):
+    symbol: str
