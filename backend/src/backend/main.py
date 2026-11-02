@@ -6,13 +6,14 @@ from backend.exceptions import (
     SymbolNotInWatchlistError,
     UnknownSymbolError,
 )
-from backend.routers import orders, prices, watchlist
+from backend.routers import orders, prices, stream, watchlist
 
 app = FastAPI(title="Trading Platform API")
 
 app.include_router(orders.router)
 app.include_router(prices.router)
 app.include_router(watchlist.router)
+app.include_router(stream.router)
 
 
 @app.get("/")
