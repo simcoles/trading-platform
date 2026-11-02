@@ -156,6 +156,17 @@ Concepts covered: exception classes (`__init__`, `self`, `super()`), `raise` and
 
 Recurring review points to keep watching: assert `detail` bodies on error tests (a status code alone can pass because of a missing route), make each test set up its own data, check indentation after pasting, and run `git status` before committing.
 
+### Milestone 6 complete (2026-11-02): async and WebSockets
+
+- `playground/async_demo.py` compares sequential `await` (3s) with `asyncio.gather` (1s).
+- `market.py`: `MAX_MOVE = 0.01`, `next_price(price, rng)` (random walk of at most ±1%, rounded to 2 places), and `simulate_tick(current, rng)`, which returns a new dict and never mutates its input. `rng: random.Random` is injected so tests can pass a seeded generator.
+- `routers/stream.py`: `WS /ws/prices` accepts the connection, copies `prices`, creates one `random.Random()` per connection, then loops forever: `simulate_tick` → `send_json` → `await asyncio.sleep(TICK_SECONDS)` (1.0). It catches `WebSocketDisconnect` when the client leaves.
+- `tests/test_stream.py`: first message has every symbol within 1% of its start price; 5 messages arrive quickly with `monkeypatch.setattr(stream, "TICK_SECONDS", 0)`, and prices move; the shared `prices` dict is unchanged after streaming.
+- Manual experiment: with `time.sleep` in place of `asyncio.sleep`, `/health` hung until the stream stopped, and Ctrl+C could not shut the server down (needed `pkill -f "uvicorn backend.main:app"`). Reverted with `git restore`.
+- 35 tests.
+
+Concepts covered: the event loop (one thread, like JS), coroutines are lazy ("never awaited"), `asyncio.run`, `asyncio.sleep` vs blocking `time.sleep` (Ruff ASYNC251), `asyncio.gather`, `time.perf_counter` (seconds, not ms), `random.Random(seed)` and dependency injection for deterministic tests, dict comprehensions, returning new dicts vs mutating, `dict(d)`/`d.copy()` vs aliasing, `dict.items()` yielding `(key, value)` in that order, WebSocket routes (`@router.websocket`, `accept`, `send_json`, `WebSocketDisconnect`), `TestClient.websocket_connect`, `monkeypatch.setattr` on module constants, browser `new WebSocket(...)`, and stopping stuck processes (`Ctrl+C`, `pkill`, `lsof -i :8000`).
+
 ## Running the app
 
 From any folder:
@@ -178,12 +189,14 @@ uv run --directory backend pytest -q
 
 ## Immediate next steps
 
-Lesson 6: async and WebSockets (roadmap item 6).
+Lesson 7: React/TypeScript frontend integration (roadmap item 7).
 
-1. How `async`/`await` and the event loop work in Python, compared with JS. When `async def` matters in FastAPI and why blocking calls (e.g. `time.sleep`) freeze the server.
-2. A simulated price generator: prices move by a small random amount on an interval.
-3. A `/ws/prices` WebSocket endpoint that streams price updates to connected clients.
-4. Testing WebSockets with `TestClient.websocket_connect`.
+1. Scaffold `frontend/` (Vite + React + TypeScript) and run it alongside the backend.
+2. CORS: why the browser blocks `localhost:5173` → `localhost:8000`, and FastAPI's `CORSMiddleware`.
+3. Fetch `GET /prices` and the watchlist from React; type the responses to match the Pydantic models.
+4. Subscribe to `/ws/prices` in a hook and render live prices.
+
+Possible backend follow-ups: each WebSocket connection currently has its own independent price walk (clients see different prices); a shared broadcaster comes with Redis/event-driven work later.
 
 ## Longer-term roadmap
 
