@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.exceptions import (
@@ -8,8 +9,15 @@ from backend.exceptions import (
 )
 from backend.routers import orders, prices, stream, watchlist
 
-app = FastAPI(title="Trading Platform API")
+FRONTEND_ORIGIN = "http://localhost:5173"
 
+app = FastAPI(title="Trading Platform API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_ORIGIN],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 app.include_router(orders.router)
 app.include_router(prices.router)
 app.include_router(watchlist.router)
