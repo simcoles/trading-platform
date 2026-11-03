@@ -2,14 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.config import FRONTEND_ORIGIN
 from backend.exceptions import (
     SymbolAlreadyInWatchlistError,
     SymbolNotInWatchlistError,
     UnknownSymbolError,
 )
 from backend.routers import orders, prices, stream, watchlist
-
-FRONTEND_ORIGIN = "http://localhost:5173"
 
 app = FastAPI(title="Trading Platform API")
 app.add_middleware(

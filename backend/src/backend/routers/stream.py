@@ -1,8 +1,9 @@
 import asyncio
 import random
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
+from backend.config import FRONTEND_ORIGIN
 from backend.market import simulate_tick
 from backend.pricing import prices
 
@@ -13,6 +14,10 @@ TICK_SECONDS = 1.0
 
 @router.websocket("/ws/prices")
 async def stream_prices(websocket: WebSocket) -> None:
+    origin = websocket.headers.get("origin")
+    if origin != FRONTEND_ORIGIN:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await websocket.accept()
     current_prices = dict(prices)  # make a copy of the prices dict
     rng = random.Random()

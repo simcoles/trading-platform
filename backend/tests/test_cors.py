@@ -1,6 +1,6 @@
 import pytest
 
-from backend.main import FRONTEND_ORIGIN
+from backend.config import FRONTEND_ORIGIN
 
 OTHER_ORIGIN = "http://evil.example"
 
