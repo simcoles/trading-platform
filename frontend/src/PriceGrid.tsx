@@ -5,8 +5,8 @@ import type {
   ValueFormatterParams,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useEffect, useState } from "react";
-import { getPrices, type PriceResponse } from "./api";
+import type { PriceResponse } from "./api";
+import { useLivePrices } from "./useLivePrices";
 
 // Defined outside the component, so the grid gets the same array on every render
 const columnDefs: ColDef<PriceResponse>[] = [
@@ -34,51 +34,31 @@ function getRowId(params: GetRowIdParams<PriceResponse>): string {
 }
 
 export default function PriceGrid() {
-  const [prices, setPrices] = useState<PriceResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { prices, status } = useLivePrices();
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadPrices() {
-      try {
-        const data = await getPrices();
-        if (!ignore) {
-          setPrices(data);
-        }
-      } catch (err) {
-        if (!ignore) {
-          setError(
-            `Failed to load prices: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadPrices();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
-
-  if (loading) {
-    return <CircularProgress />;
+  if (status === "connecting") {
+    return <Alert severity="info">Connecting to live prices...</Alert>;
   }
-  if (error) {
-    return <Alert severity="error">{error}</Alert>;
+
+  if (prices.length === 0) {
+    return status === "closed" ? (
+      <Alert severity="error">Could not connect to live prices</Alert>
+    ) : (
+      <CircularProgress />
+    );
   }
 
   return (
-    <AgGridReact<PriceResponse>
-      rowData={prices}
-      columnDefs={columnDefs}
-      getRowId={getRowId}
-      domLayout="autoHeight"
-    />
+    <>
+      {status === "closed" && (
+        <Alert severity="error">Connection to live prices closed</Alert>
+      )}
+      <AgGridReact<PriceResponse>
+        rowData={prices}
+        columnDefs={columnDefs}
+        getRowId={getRowId}
+        domLayout="autoHeight"
+      />
+    </>
   );
 }
