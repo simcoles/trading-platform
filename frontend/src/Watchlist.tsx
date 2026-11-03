@@ -93,7 +93,11 @@ export default function Watchlist() {
           onChange={(e) => setInput(e.target.value)}
           disabled={busy}
         />
-        <Button type="submit" variant="contained" disabled={busy}>
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={busy || input.trim() === ""}
+        >
           Add
         </Button>
       </Box>
