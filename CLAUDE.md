@@ -160,22 +160,51 @@ Recurring review points to keep watching: assert `detail` bodies on error tests 
 
 - `playground/async_demo.py` compares sequential `await` (3s) with `asyncio.gather` (1s).
 - `market.py`: `MAX_MOVE = 0.01`, `next_price(price, rng)` (random walk of at most ±1%, rounded to 2 places), and `simulate_tick(current, rng)`, which returns a new dict and never mutates its input. `rng: random.Random` is injected so tests can pass a seeded generator.
-- `routers/stream.py`: `WS /ws/prices` accepts the connection, copies `prices`, creates one `random.Random()` per connection, then loops forever: `simulate_tick` → `send_json` → `await asyncio.sleep(TICK_SECONDS)` (1.0). It catches `WebSocketDisconnect` when the client leaves.
+- `routers/stream.py` (superseded by the shared broadcaster in Milestone 7): `WS /ws/prices` accepts the connection, copies `prices`, creates one `random.Random()` per connection, then loops forever: `simulate_tick` → `send_json` → `await asyncio.sleep(TICK_SECONDS)` (1.0). It catches `WebSocketDisconnect` when the client leaves.
 - `tests/test_stream.py`: first message has every symbol within 1% of its start price; 5 messages arrive quickly with `monkeypatch.setattr(stream, "TICK_SECONDS", 0)`, and prices move; the shared `prices` dict is unchanged after streaming.
 - Manual experiment: with `time.sleep` in place of `asyncio.sleep`, `/health` hung until the stream stopped, and Ctrl+C could not shut the server down (needed `pkill -f "uvicorn backend.main:app"`). Reverted with `git restore`.
 - 35 tests.
 
 Concepts covered: the event loop (one thread, like JS), coroutines are lazy ("never awaited"), `asyncio.run`, `asyncio.sleep` vs blocking `time.sleep` (Ruff ASYNC251), `asyncio.gather`, `time.perf_counter` (seconds, not ms), `random.Random(seed)` and dependency injection for deterministic tests, dict comprehensions, returning new dicts vs mutating, `dict(d)`/`d.copy()` vs aliasing, `dict.items()` yielding `(key, value)` in that order, WebSocket routes (`@router.websocket`, `accept`, `send_json`, `WebSocketDisconnect`), `TestClient.websocket_connect`, `monkeypatch.setattr` on module constants, browser `new WebSocket(...)`, and stopping stuck processes (`Ctrl+C`, `pkill`, `lsof -i :8000`).
 
+### Milestone 7 complete (2026-11-05): React frontend, CORS, shared price broadcaster
+
+Frontend (`frontend/`, Vite + React 19 + TypeScript, Node 26 / npm 11):
+
+- `typescript` is pinned to `~6.0.3`, because `typescript-eslint` 8.72 does not support TS 7 yet (the Vite template's `~7.0.2` caused an `ERESOLVE` peer conflict). Bump it when typescript-eslint supports 7.
+- MUI 9.5 (`@mui/material` + Emotion) and AG Grid Community 36.2 (`ag-grid-community`, `ag-grid-react`). `main.tsx` registers `AllCommunityModule`, wraps the app in `ThemeProvider` + `CssBaseline`; `index.css` was removed.
+- `src/api.ts` is the only place that calls `fetch`: `API_URL`, `WS_URL` (built from `API_URL`), types mirroring the Pydantic models (`Currency`, `PriceResponse`, `WatchlistItem`), `ApiError(status, message)`, and `request<T>` (turns `detail` string-or-list into a message, handles 204, falls back for non-JSON errors).
+- `src/useLivePrices.ts`: WebSocket hook with `ignore` guard, status `connecting | open | reconnecting | closed`, reconnect with capped exponential backoff and jitter (500ms base, 10s cap, 8 attempts), cleanup clears the timer and closes the current socket.
+- `src/PriceGrid.tsx`: typed `AgGridReact<PriceResponse>` with module-level `columnDefs`/`getRowId`, `enableCellChangeFlash` on price, warning/error alerts above the last known prices.
+- `src/Watchlist.tsx`: MUI form + chips, re-fetches after each change (server is the source of truth), `ApiError` messages in a dismissible `Alert`, Add disabled for blank input.
+- `App.tsx` owns layout and headings (`Container`, `Stack`, `Typography` with `component="h1"/"h2"`).
+- No frontend test runner yet; behaviour verified manually (CORS errors, preflights, reconnect, 403 on `npm run preview` at :4173).
+
+Backend:
+
+- `config.py`: `FRONTEND_ORIGIN = "http://localhost:5173"`, imported by `main.py` (`CORSMiddleware`: that origin, `GET/POST/DELETE`, `Content-Type`) and `stream.py` (Origin check, because browsers do not apply CORS to WebSockets; rejects with close code 1008 before `accept()`, which uvicorn turns into a 403).
+- `WatchlistItem`: `model_config = ConfigDict(str_strip_whitespace=True)`, `symbol: str = Field(min_length=1, max_length=10)`.
+- `broadcaster.py`: `PriceBroadcaster(rng)` with `current_prices`, `subscribe()` → `asyncio.Queue(maxsize=1)`, `unsubscribe()`, `tick()` (drops a stale tick rather than waiting on slow clients), `run()`; module-level `broadcaster` instance. This replaces the per-connection loop described in Milestone 6, so all clients see the same prices.
+- `main.py` `lifespan` (`@asynccontextmanager`, `-> AsyncGenerator[None]`) starts `broadcaster.run()` with `asyncio.create_task` and cancels/awaits it on shutdown.
+- `stream.py` only reads shared state: sends `current_prices` on connect, then forwards ticks from its queue; `unsubscribe` in `finally`.
+- `tests/conftest.py`: `with TestClient(app) as client: yield client`, so the lifespan runs in tests (without `with`, the task never starts and only the snapshot arrives).
+- Tests: `test_cors.py` (allowed/other origin, preflight, parametrized rejected preflights), `test_broadcaster.py` (unit tests, no timing), `test_stream.py` (snapshot shape, two clients get the same prices, rejected origins). 49 tests.
+- Known limits: watchlist and broadcaster state are in process memory (lost on reload, separate per worker); next fix is persistence (roadmap 8) and Redis pub/sub for multiple workers (roadmap 10).
+
+Concepts covered: npm peer dependency conflicts vs uv resolution, lockfiles (`package-lock.json` ↔ `uv.lock`), Node resolving `node_modules` up the tree (install in the right folder), CORS (browser-enforced, server opts in, exact origin match, simple vs preflighted requests, `Access-Control-Max-Age` caching), middleware and `add_middleware`, keyword arguments, `in` vs `==` for exact assertions, `parametrize` `ids` and one-variable-per-case rows, TS types as unchecked mirrors of Pydantic models, `detail` as string or list, `erasableSyntaxOnly`, `FormEvent` → `SubmitEvent` (React 19 types), macOS case-insensitive filenames vs Linux, headings/spacing owned by the parent, Pydantic `ConfigDict` (unknown keys silently ignored) vs `Field` constraints, validating on both client (UX) and server (correctness), WebSocket lifecycle and StrictMode double effects, WebSockets not covered by CORS (check `Origin`), circular imports and `config.py`, combined `with (a, b):` (Ruff SIM117), classes with state (`self`, `__init__`, conventional `_private`), `asyncio.Queue` and `*_nowait`, look-before-you-leap vs EAFP, reads vs writes to shared state, `finally` for cleanup, `asyncio.create_task`, FastAPI `lifespan` (replaces deprecated `on_event`), `AsyncGenerator` vs deprecated `AsyncIterator` annotation (type-stub deprecations are editor-only), no hoisting in Python, `TestClient` as a context manager, avoiding timing-dependent tests, exponential backoff with jitter, and in-memory state lasting only as long as the process.
+
+Recurring review points (frontend): save files before asking for a check (enable Auto Save), run `npm` from `frontend/`, remove leftover TODOs and unused imports (`noUnusedLocals` fails the build), avoid shadowing outer variables.
+
 ## Running the app
 
-From any folder:
+From any folder, in two terminals:
 
 ```bash
 uv run --project ~/Projects/trading-platform/backend uvicorn backend.main:app --reload
+npm --prefix ~/Projects/trading-platform/frontend run dev
 ```
 
-Docs at http://127.0.0.1:8000/docs.
+API docs at http://127.0.0.1:8000/docs. Frontend at http://localhost:5173 (must be `localhost`, matching `FRONTEND_ORIGIN`).
 
 ## Pre-commit checklist
 
@@ -185,18 +214,22 @@ Run from the repo root before every commit:
 uv run --directory backend ruff format --check .
 uv run --directory backend ruff check .
 uv run --directory backend pytest -q
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
+
+Then `git status` to check nothing unexpected is modified.
 
 ## Immediate next steps
 
-Lesson 7: React/TypeScript frontend integration (roadmap item 7).
+Lesson 8: PostgreSQL persistence (roadmap item 8).
 
-1. Scaffold `frontend/` (Vite + React + TypeScript) and run it alongside the backend.
-2. CORS: why the browser blocks `localhost:5173` → `localhost:8000`, and FastAPI's `CORSMiddleware`.
-3. Fetch `GET /prices` and the watchlist from React; type the responses to match the Pydantic models.
-4. Subscribe to `/ws/prices` in a hook and render live prices.
-
-Possible backend follow-ups: each WebSocket connection currently has its own independent price walk (clients see different prices); a shared broadcaster comes with Redis/event-driven work later.
+1. Run PostgreSQL locally (decide between Homebrew and Docker; Docker Compose was planned for "once needed").
+2. SQLAlchemy 2.0: engine, session, declarative models, and a FastAPI dependency (`Depends`) that provides a session per request.
+3. Persist the watchlist first (replace the module-level `_watchlist` set), keeping the domain functions and HTTP behaviour the same, so the existing tests stay the spec.
+4. Alembic: initial migration, `upgrade`/`downgrade`.
+5. A test database strategy (separate database or transaction rollback per test).
+6. Later in this lesson or the next: switch money values to `decimal.Decimal` before orders are persisted.
 
 ## Longer-term roadmap
 
