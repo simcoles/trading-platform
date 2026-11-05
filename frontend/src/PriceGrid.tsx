@@ -50,6 +50,9 @@ export default function PriceGrid() {
 
   return (
     <>
+      {status === "reconnecting" && (
+        <Alert severity="warning">Reconnecting to live prices…</Alert>
+      )}
       {status === "closed" && (
         <Alert severity="error">Connection to live prices closed</Alert>
       )}

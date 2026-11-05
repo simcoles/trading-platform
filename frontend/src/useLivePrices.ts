@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { WS_URL, type PriceResponse } from "./api";
 
+const BASE_DELAY_MS = 500; // 0.5 seconds
+const MAX_DELAY_MS = 10_000; // 10 seconds
+const MAX_ATTEMPTS = 8; // Maximum number of reconnection attempts
+
 // What the server sends: {"AAPL": 150.42, ...}
 type PriceTick = Record<string, number>;
 
-export type LiveStatus = "connecting" | "open" | "closed";
+export type LiveStatus = "connecting" | "reconnecting" | "open" | "closed";
 
 function tickToRows(tick: PriceTick): PriceResponse[] {
   return Object.entries(tick).map(([symbol, price]) => ({
@@ -12,6 +16,12 @@ function tickToRows(tick: PriceTick): PriceResponse[] {
     price,
     currency: "USD",
   }));
+}
+function backoffDelay(attempt: number): number {
+  const exponentialDelay = BASE_DELAY_MS * Math.pow(2, attempt);
+  const cappedDelay = Math.min(exponentialDelay, MAX_DELAY_MS);
+  const jitteredDelay = cappedDelay * (0.5 + Math.random() * 0.5); // Random factor between 0.5 and 1
+  return jitteredDelay;
 }
 
 export function useLivePrices(): {
@@ -23,30 +33,45 @@ export function useLivePrices(): {
 
   useEffect(() => {
     let ignore = false;
-    const ws = new WebSocket(WS_URL);
+    let ws: WebSocket | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
 
-    ws.onopen = () => {
-      if (!ignore) {
-        setStatus("open");
-      }
+    const connect = () => {
+      ws = new WebSocket(WS_URL);
+      ws.onopen = () => {
+        if (!ignore) {
+          attempt = 0; // Reset attempt counter on successful connection
+          setStatus("open");
+        }
+      };
+
+      ws.onmessage = (event: MessageEvent<string>) => {
+        const tick: PriceTick = JSON.parse(event.data);
+        if (!ignore) {
+          setPrices(tickToRows(tick));
+        }
+      };
+
+      ws.onclose = () => {
+        if (ignore) return;
+        if (attempt >= MAX_ATTEMPTS) {
+          setStatus("closed");
+          return;
+        }
+        setStatus("reconnecting");
+        const delay = backoffDelay(attempt);
+        retryTimer = setTimeout(connect, delay);
+        attempt++;
+      };
     };
 
-    ws.onmessage = (event: MessageEvent<string>) => {
-      const tick: PriceTick = JSON.parse(event.data);
-      if (!ignore) {
-        setPrices(tickToRows(tick));
-      }
-    };
-
-    ws.onclose = () => {
-      if (!ignore) {
-        setStatus("closed");
-      }
-    };
+    connect();
 
     return () => {
       ignore = true;
-      ws.close();
+      clearTimeout(retryTimer);
+      ws?.close();
     };
   }, []);
 
