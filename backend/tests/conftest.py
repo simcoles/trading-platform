@@ -7,7 +7,8 @@ from backend.watchlist import clear_watchlist
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    with TestClient(app) as client:
+        yield client
 
 
 @pytest.fixture(autouse=True)

@@ -1,7 +1,12 @@
+import asyncio
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager, suppress
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.broadcaster import broadcaster
 from backend.config import FRONTEND_ORIGIN
 from backend.exceptions import (
     SymbolAlreadyInWatchlistError,
@@ -10,7 +15,17 @@ from backend.exceptions import (
 )
 from backend.routers import orders, prices, stream, watchlist
 
-app = FastAPI(title="Trading Platform API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    task = asyncio.create_task(broadcaster.run())
+    yield
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
+
+
+app = FastAPI(title="Trading Platform API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_ORIGIN],
