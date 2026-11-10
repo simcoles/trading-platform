@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -23,11 +24,14 @@ class OrderRequest(BaseModel):
 
 
 class OrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
     symbol: str
     quantity: int
     side: Side
     price: Money
     total: Money
+    created_at: datetime
 
 
 class WatchlistItem(BaseModel):
