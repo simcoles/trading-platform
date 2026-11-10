@@ -1,15 +1,10 @@
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.exceptions import SymbolAlreadyInWatchlistError, SymbolNotInWatchlistError
 from backend.orm import WatchlistEntry
 from backend.pricing import look_up_price
-
-
-def clear_watchlist(session: Session) -> None:
-    session.execute(delete(WatchlistEntry))
-    session.commit()
 
 
 def get_watchlist(session: Session) -> list[str]:
