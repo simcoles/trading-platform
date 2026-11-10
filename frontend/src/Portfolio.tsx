@@ -7,6 +7,7 @@ import {
   type PriceResponse,
 } from "./api";
 import { formatMoney } from "./format";
+import PositionsGrid from "./PositionsGrid";
 
 type Props = { prices: PriceResponse[]; refreshKey: number };
 
@@ -56,6 +57,7 @@ export default function Portfolio({ prices, refreshKey }: Props) {
       <Typography>
         {`Cash ${formatMoney(portfolio.cash)} . Invested ${formatMoney(invested)} . Total ${formatMoney(totalValue)}`}
       </Typography>
+      <PositionsGrid holdings={holdings} invested={invested} />
       <AllocationChart holdings={holdings} />
     </Stack>
   );

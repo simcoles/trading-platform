@@ -254,7 +254,7 @@ Done so far: money is `Decimal` (`round_money`, half-up; `Money` serializes as a
 
 1. Done: `portfolio.py` derives cash and positions from the order history (`case`/`sum`/`coalesce`/`group_by`/`having`, `scalar_one()`); `GET /portfolio`. 57 tests.
 2. Done: `OrdersBlotter` (AG Grid, `format.ts` with `Intl` formatters, Vitest with `TZ=UTC`) and `OrderTicket` (MUI select, side toggle, client-side quantity check). `App` owns the single `useLivePrices()` socket and an `ordersVersion` counter; `Orders` prepends the placed order and calls `onPlaced()`; `Portfolio` refetches on `refreshKey` and values positions at live prices with `useMemo`.
-3. Positions grid valued at live WebSocket prices (market value, weight), with `getRowId` updates.
+3. Done: `PositionsGrid` (AG Grid in `Portfolio`): quantity, live price (cell flash), market value, weight (`Intl` percent, guarded against zero invested); rows updated in place via `getRowId`.
 4. Charts with **Highcharts** 13.1 + `@highcharts/react` 5.4 (non-commercial licence). Done: `AllocationChart` (bar chart, `<Accessibility />` module). `vite.config.ts` has `optimizeDeps.exclude: ["@highcharts/react"]`, because dev pre-bundling of its lazy series imports caused "Class extends value undefined". Still to do: a live price line chart.
 5. Frontend tests: Vitest + React Testing Library.
 6. Trading rules: no buying beyond cash, no selling more than held (409, shown in the order form).
