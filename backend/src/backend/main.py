@@ -13,7 +13,7 @@ from backend.exceptions import (
     SymbolNotInWatchlistError,
     UnknownSymbolError,
 )
-from backend.routers import orders, prices, stream, watchlist
+from backend.routers import health, orders, prices, stream, watchlist
 
 
 @asynccontextmanager
@@ -36,6 +36,7 @@ app.include_router(orders.router)
 app.include_router(prices.router)
 app.include_router(watchlist.router)
 app.include_router(stream.router)
+app.include_router(health.router)
 
 
 @app.get("/")
