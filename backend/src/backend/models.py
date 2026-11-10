@@ -1,14 +1,18 @@
-from typing import Literal
+from decimal import Decimal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PlainSerializer
 
 Currency = Literal["USD", "GBP"]
 Side = Literal["buy", "sell"]
 
+# Exact in Python, a plain number in JSON
+Money = Annotated[Decimal, PlainSerializer(float, return_type=float, when_used="json")]
+
 
 class PriceResponse(BaseModel):
     symbol: str
-    price: float
+    price: Money
     currency: Currency
 
 
@@ -22,8 +26,8 @@ class OrderResponse(BaseModel):
     symbol: str
     quantity: int
     side: Side
-    price: float
-    total: float
+    price: Money
+    total: Money
 
 
 class WatchlistItem(BaseModel):

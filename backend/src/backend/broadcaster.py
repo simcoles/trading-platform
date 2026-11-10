@@ -11,7 +11,9 @@ Prices = dict[str, float]
 
 class PriceBroadcaster:
     def __init__(self, rng: random.Random) -> None:
-        self.current_prices: Prices = dict(prices)
+        self.current_prices: Prices = {
+            symbol: float(price) for symbol, price in prices.items()
+        }
         self._rng = rng
         self._subscribers: set[asyncio.Queue[Prices]] = set()
 
