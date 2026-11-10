@@ -1,28 +1,46 @@
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 from backend.exceptions import SymbolAlreadyInWatchlistError, SymbolNotInWatchlistError
+from backend.orm import WatchlistEntry
 from backend.pricing import look_up_price
 
-_watchlist: set[str] = set()
+
+def clear_watchlist(session: Session) -> None:
+    session.execute(delete(WatchlistEntry))
+    session.commit()
 
 
-def clear_watchlist() -> None:
-    _watchlist.clear()
+def get_watchlist(session: Session) -> list[str]:
+    build = select(WatchlistEntry.symbol).order_by(WatchlistEntry.symbol)
+    symbols = session.scalars(build)
+    return list(symbols)
 
 
-def get_watchlist() -> list[str]:
-    return sorted(_watchlist)
-
-
-def add_to_watchlist(symbol: str) -> str:
+def add_to_watchlist(session: Session, symbol: str) -> str:
     symbol = symbol.upper()
     look_up_price(symbol)  # raises UnknownSymbolError if symbol is not found
-    if symbol in _watchlist:
-        raise SymbolAlreadyInWatchlistError(symbol)
-    _watchlist.add(symbol)
+
+    session.add(WatchlistEntry(symbol=symbol))
+
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise SymbolAlreadyInWatchlistError(symbol) from None
+
     return symbol
 
 
-def remove_from_watchlist(symbol: str) -> None:
+def remove_from_watchlist(session: Session, symbol: str) -> None:
     symbol = symbol.upper()
-    if symbol not in _watchlist:
+    entry = session.scalar(
+        select(WatchlistEntry).where(WatchlistEntry.symbol == symbol)
+    )
+
+    if entry is None:
         raise SymbolNotInWatchlistError(symbol)
-    _watchlist.remove(symbol)
+
+    session.delete(entry)
+    session.commit()

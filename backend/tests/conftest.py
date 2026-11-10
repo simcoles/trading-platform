@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.db import SessionLocal
 from backend.main import app
 from backend.watchlist import clear_watchlist
 
@@ -13,4 +14,5 @@ def client():
 
 @pytest.fixture(autouse=True)
 def reset_watchlist():
-    clear_watchlist()
+    with SessionLocal() as session:
+        clear_watchlist(session)
