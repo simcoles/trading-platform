@@ -3,11 +3,24 @@ export const WS_URL = `${API_URL.replace(/^http/, "ws")}/ws/prices`;
 // ---- Types: mirror backend/src/backend/models.py ----
 
 export type Currency = "USD" | "GBP";
-
+export type Side = "buy" | "sell";
 export type PriceResponse = {
   symbol: string;
   price: number;
   currency: Currency;
+};
+
+export type OrderRequest = {
+  symbol: string;
+  quantity: number;
+  side: Side;
+};
+
+export type OrderResponse = OrderRequest & {
+  id: number;
+  price: number;
+  total: number;
+  created_at: string; // ISO 8601, UTC
 };
 
 export type WatchlistItem = {
@@ -88,5 +101,17 @@ export function addToWatchlist(symbol: string): Promise<WatchlistItem> {
 export function removeFromWatchlist(symbol: string): Promise<void> {
   return request<void>(`/watchlist/${encodeURIComponent(symbol)}`, {
     method: "DELETE",
+  });
+}
+
+export function getOrders(): Promise<OrderResponse[]> {
+  return request<OrderResponse[]>("/orders");
+}
+
+export function placeOrder(order: OrderRequest): Promise<OrderResponse> {
+  return request<OrderResponse>("/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(order),
   });
 }

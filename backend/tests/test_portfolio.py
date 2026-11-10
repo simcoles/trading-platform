@@ -26,7 +26,6 @@ def test_sold_out_positions_are_hidden(session):
 
 
 def test_get_portfolio(client):
-    # TODO: POST /orders: buy 10 AAPL
     client.post("/orders", json={"symbol": "AAPL", "side": "buy", "quantity": 10})
     response = client.get("/portfolio")
     assert response.status_code == 200
