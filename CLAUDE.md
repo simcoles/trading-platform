@@ -247,12 +247,19 @@ Backend tests need the database container running. Then `git status` to check no
 
 ## Immediate next steps
 
-Lesson 9: simulated portfolios, orders, and trading rules (roadmap item 9).
+Lesson 9: simulated portfolios, orders, and trading rules (roadmap item 9). Fast-tracked toward data grids, charts and authentication (decided 2026-11-10, for a frontend interview focused on investment analytics).
 
-1. Switch money values to `decimal.Decimal` (prices, totals, conversion) and `Numeric` columns, before anything financial is stored.
-2. Persist orders: an `orders` table via a new Alembic migration; `POST /orders` saves the simulated order, `GET /orders` lists them.
-3. A simulated cash balance and positions, with trading rules (no selling more than you hold, no buying beyond your cash).
-4. Possibly: replace the hard-coded `prices` dict with the broadcaster's live prices when filling orders.
+Done so far: money is `Decimal` (`round_money`, half-up; `Money` serializes as a JSON number; the live feed stays float, converted in `PriceBroadcaster`); `orders` table (second migration `0bda7016625a`), `POST /orders` saves, `GET /orders` newest first. 53 tests.
+
+1. In progress: `portfolio.py`, with cash and positions derived from the order history (`case`/`sum`/`coalesce`/`group_by`/`having`, `scalar_one()`), plus `GET /portfolio`.
+2. Order ticket form plus orders blotter grid (AG Grid: `Intl.NumberFormat`, sorting, filtering, buy/sell not shown by colour alone).
+3. Positions grid valued at live WebSocket prices (market value, weight), with `getRowId` updates.
+4. Charts with **Highcharts** (`highcharts` + `highcharts-react-official`, under the non-commercial licence): an allocation chart, and a live price line chart.
+5. Frontend tests: Vitest + React Testing Library.
+6. Trading rules: no buying beyond cash, no selling more than held (409, shown in the order form).
+7. Authentication with **Keycloak in Docker Compose** (OIDC auth code + PKCE in React; FastAPI validates JWTs via JWKS; a roles claim for RBAC, e.g. only traders can place orders; orders get an owner `sub` for per-user entitlements). Note where Entra ID/MSAL differs.
+
+Later: Redis, CI, and possibly replacing the hard-coded `prices` with live prices when filling orders.
 
 ## Longer-term roadmap
 

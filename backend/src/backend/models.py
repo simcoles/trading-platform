@@ -37,3 +37,13 @@ class OrderResponse(BaseModel):
 class WatchlistItem(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True)
     symbol: str = Field(min_length=1, max_length=10)
+
+
+class Position(BaseModel):
+    symbol: str
+    quantity: int
+
+
+class PortfolioResponse(BaseModel):
+    cash: Money
+    positions: list[Position]
