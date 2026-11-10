@@ -1,4 +1,7 @@
-from sqlalchemy import String
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import DateTime, Numeric, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -11,3 +14,17 @@ class WatchlistEntry(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     symbol: Mapped[str] = mapped_column(String(10), unique=True)
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(10))
+    side: Mapped[str] = mapped_column(String(4))
+    quantity: Mapped[int]
+    price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    total: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
