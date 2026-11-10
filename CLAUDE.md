@@ -195,9 +195,34 @@ Concepts covered: npm peer dependency conflicts vs uv resolution, lockfiles (`pa
 
 Recurring review points (frontend): save files before asking for a check (enable Auto Save), run `npm` from `frontend/`, remove leftover TODOs and unused imports (`noUnusedLocals` fails the build), avoid shadowing outer variables.
 
+### Milestone 8 complete (2026-11-10): PostgreSQL, SQLAlchemy, Alembic
+
+- `docker-compose.yml` (repo root): `postgres:18-alpine` on `127.0.0.1:5433` (an EDB PostgreSQL 15 system service already owns 5432; leave it alone), volume mounted at `/var/lib/postgresql` (the Postgres 18 layout), `pg_isready` healthcheck. Credentials come from the gitignored root `.env`; `.env.example` lists the keys with empty values.
+- `.env` also holds `DATABASE_URL=postgresql+psycopg://...@localhost:5433/trading`. The `+psycopg` driver part is required; plain `postgresql://` makes SQLAlchemy look for psycopg2.
+- Dependencies: `sqlalchemy` 2.1, `psycopg[binary]` 3.3, `pydantic-settings` 2.16, `alembic` 1.20.
+- `config.py`: `REPO_ROOT`, `Settings(BaseSettings)` with `database_url: str` read from `REPO_ROOT / ".env"` (`extra="ignore"`), module-level `settings`. `Settings()` carries `# pyright: ignore[reportCallIssue]` because the checker cannot see env-filled fields.
+- `db.py`: `engine` (`pool_pre_ping=True`), `SessionLocal`, `get_session()` generator dependency, and `SessionDep = Annotated[Session, Depends(get_session)]`.
+- `orm.py`: `Base(DeclarativeBase)` and `WatchlistEntry` (`watchlist` table: `id` integer primary key/SERIAL, `symbol` `String(10)` unique). Pydantic models (`models.py`) describe the API; ORM models describe tables.
+- `watchlist.py`: domain functions take a `Session` first. `add_to_watchlist` relies on the unique constraint (catches `IntegrityError`, rolls back, raises `SymbolAlreadyInWatchlistError ... from None`) instead of check-then-insert. Still no FastAPI imports.
+- Watchlist routes and `GET /health/db` (`routers/health.py`, runs `select 1`) are plain `def`, because the SQLAlchemy session blocks.
+- Alembic in `backend/`: `alembic.ini` has no URL (post-write hooks run `ruff check --fix` and `ruff format` on new migrations); `migrations/env.py` uses `Base.metadata` and falls back to `settings.database_url` only when no URL was passed in. First migration `81f88f345651` creates `watchlist`.
+- Tests use a separate `trading_test` database (name derived from `DATABASE_URL` + `_test`). `conftest.py`: session-scoped `engine` fixture runs `alembic upgrade head` once per run (URL `%` escaped as `%%` for configparser); function-scoped `session` fixture wraps each test in a transaction with `join_transaction_mode="create_savepoint"` and rolls it back; `client` overrides `get_session` via `app.dependency_overrides`. Dev data survives test runs and the test database is empty afterwards. 50 tests.
+- The watchlist now survives server restarts.
+
+Concepts covered: Docker Compose (services, ports bound to `127.0.0.1`, named volumes, healthchecks, `up -d --wait`, `down` vs `down -v`, `${VAR}` vs `$${VAR}`), `.env` vs `.env.example`, pydantic-settings, `Path` and the `/` operator, type-checker limits and targeted `pyright: ignore[rule]`, public vs internal imports (`fastapi` vs `fastapi.params`), engine/connection pool vs session, `def` vs `async def` with blocking libraries (thread pool), `Depends`/`Annotated` and generator dependencies (like `yield` fixtures), pytest fixtures vs FastAPI dependencies, declarative models (`Mapped`, `mapped_column`, `__tablename__`), reading generated SQL (`CreateTable`), SERIAL and sequences that never reuse ids, `select`/`where`/`order_by`, `scalars` vs `scalar`, `add`/`delete`/`commit`/`rollback`, overloaded `==` building SQL, unique constraints over check-then-insert (race conditions), `raise ... from None`, catching only where you can handle it, Alembic (revisions chain, autogenerate as a draft to read, `upgrade`/`downgrade`/`current`/`check`, post-write hooks), fixture scopes (`session` vs `function`; pytest "session" ≠ SQLAlchemy `Session`), fixtures depending on fixtures, transactions and savepoints, `dependency_overrides`, Ruff's magic trailing comma.
+
+Deferred: switch money values to `decimal.Decimal` when orders are persisted (start of Lesson 9).
+
 ## Running the app
 
-From any folder, in two terminals:
+Start the database first (from the repo root), then the servers in two terminals:
+
+```bash
+docker compose up -d --wait
+uv run --directory backend alembic upgrade head   # after pulling new migrations
+```
+
+One-time setup for tests: `docker compose exec db createdb -U trading trading_test` (the test fixtures migrate it).
 
 ```bash
 uv run --project ~/Projects/trading-platform/backend uvicorn backend.main:app --reload
@@ -218,18 +243,16 @@ npm --prefix frontend run lint
 npm --prefix frontend run build
 ```
 
-Then `git status` to check nothing unexpected is modified.
+Backend tests need the database container running. Then `git status` to check nothing unexpected is modified (and that `.env` is never listed). When work is ready, the mentor suggests a commit message; the user makes the commit.
 
 ## Immediate next steps
 
-Lesson 8: PostgreSQL persistence (roadmap item 8).
+Lesson 9: simulated portfolios, orders, and trading rules (roadmap item 9).
 
-1. Run PostgreSQL locally (decide between Homebrew and Docker; Docker Compose was planned for "once needed").
-2. SQLAlchemy 2.0: engine, session, declarative models, and a FastAPI dependency (`Depends`) that provides a session per request.
-3. Persist the watchlist first (replace the module-level `_watchlist` set), keeping the domain functions and HTTP behaviour the same, so the existing tests stay the spec.
-4. Alembic: initial migration, `upgrade`/`downgrade`.
-5. A test database strategy (separate database or transaction rollback per test).
-6. Later in this lesson or the next: switch money values to `decimal.Decimal` before orders are persisted.
+1. Switch money values to `decimal.Decimal` (prices, totals, conversion) and `Numeric` columns, before anything financial is stored.
+2. Persist orders: an `orders` table via a new Alembic migration; `POST /orders` saves the simulated order, `GET /orders` lists them.
+3. A simulated cash balance and positions, with trading rules (no selling more than you hold, no buying beyond your cash).
+4. Possibly: replace the hard-coded `prices` dict with the broadcaster's live prices when filling orders.
 
 ## Longer-term roadmap
 
