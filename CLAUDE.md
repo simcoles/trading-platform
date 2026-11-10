@@ -241,6 +241,7 @@ uv run --directory backend ruff check .
 uv run --directory backend pytest -q
 npm --prefix frontend run lint
 npm --prefix frontend run build
+npm --prefix frontend test -- run
 ```
 
 Backend tests need the database container running. Then `git status` to check nothing unexpected is modified (and that `.env` is never listed). When work is ready, the mentor suggests a commit message; the user makes the commit.
@@ -251,10 +252,10 @@ Lesson 9: simulated portfolios, orders, and trading rules (roadmap item 9). Fast
 
 Done so far: money is `Decimal` (`round_money`, half-up; `Money` serializes as a JSON number; the live feed stays float, converted in `PriceBroadcaster`); `orders` table (second migration `0bda7016625a`), `POST /orders` saves, `GET /orders` newest first. 53 tests.
 
-1. In progress: `portfolio.py`, with cash and positions derived from the order history (`case`/`sum`/`coalesce`/`group_by`/`having`, `scalar_one()`), plus `GET /portfolio`.
-2. Order ticket form plus orders blotter grid (AG Grid: `Intl.NumberFormat`, sorting, filtering, buy/sell not shown by colour alone).
+1. Done: `portfolio.py` derives cash and positions from the order history (`case`/`sum`/`coalesce`/`group_by`/`having`, `scalar_one()`); `GET /portfolio`. 57 tests.
+2. Done: `OrdersBlotter` (AG Grid, `format.ts` with `Intl` formatters, Vitest with `TZ=UTC`) and `OrderTicket` (MUI select, side toggle, client-side quantity check). `App` owns the single `useLivePrices()` socket and an `ordersVersion` counter; `Orders` prepends the placed order and calls `onPlaced()`; `Portfolio` refetches on `refreshKey` and values positions at live prices with `useMemo`.
 3. Positions grid valued at live WebSocket prices (market value, weight), with `getRowId` updates.
-4. Charts with **Highcharts** (`highcharts` + `highcharts-react-official`, under the non-commercial licence): an allocation chart, and a live price line chart.
+4. Charts with **Highcharts** 13.1 + `@highcharts/react` 5.4 (non-commercial licence). Done: `AllocationChart` (bar chart, `<Accessibility />` module). `vite.config.ts` has `optimizeDeps.exclude: ["@highcharts/react"]`, because dev pre-bundling of its lazy series imports caused "Class extends value undefined". Still to do: a live price line chart.
 5. Frontend tests: Vitest + React Testing Library.
 6. Trading rules: no buying beyond cash, no selling more than held (409, shown in the order form).
 7. Authentication with **Keycloak in Docker Compose** (OIDC auth code + PKCE in React; FastAPI validates JWTs via JWKS; a roles claim for RBAC, e.g. only traders can place orders; orders get an owner `sub` for per-user entitlements). Note where Entra ID/MSAL differs.

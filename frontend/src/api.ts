@@ -1,7 +1,7 @@
 export const API_URL = "http://127.0.0.1:8000";
 export const WS_URL = `${API_URL.replace(/^http/, "ws")}/ws/prices`;
 // ---- Types: mirror backend/src/backend/models.py ----
-
+export type Position = { symbol: string; quantity: number };
 export type Currency = "USD" | "GBP";
 export type Side = "buy" | "sell";
 export type PriceResponse = {
@@ -9,6 +9,12 @@ export type PriceResponse = {
   price: number;
   currency: Currency;
 };
+
+export type PortfolioResponse = { cash: number; positions: Position[] };
+
+export function getPortfolio(): Promise<PortfolioResponse> {
+  return request<PortfolioResponse>("/portfolio");
+}
 
 export type OrderRequest = {
   symbol: string;

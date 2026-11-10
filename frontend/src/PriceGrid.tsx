@@ -6,8 +6,12 @@ import type {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import type { PriceResponse } from "./api";
-import { useLivePrices } from "./useLivePrices";
+import type { LiveStatus } from "./useLivePrices";
 
+type PriceGridProps = {
+  prices: PriceResponse[];
+  status: LiveStatus;
+};
 // Defined outside the component, so the grid gets the same array on every render
 const columnDefs: ColDef<PriceResponse>[] = [
   { field: "symbol", headerName: "Symbol" },
@@ -33,9 +37,7 @@ function getRowId(params: GetRowIdParams<PriceResponse>): string {
   return params.data.symbol;
 }
 
-export default function PriceGrid() {
-  const { prices, status } = useLivePrices();
-
+export default function PriceGrid({ prices, status }: PriceGridProps) {
   if (status === "connecting") {
     return <Alert severity="info">Connecting to live prices...</Alert>;
   }
