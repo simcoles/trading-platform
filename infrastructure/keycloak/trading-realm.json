@@ -1,0 +1,66 @@
+{
+  "realm": "trading",
+  "enabled": true,
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "trader", "description": "Can place simulated orders" },
+      { "name": "viewer", "description": "Read-only access" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "trading-frontend",
+      "name": "Trading Platform (React)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "trading-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "trading-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "firstName": "Alice",
+      "lastName": "Trader",
+      "email": "alice@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        { "type": "password", "value": "alice", "temporary": false }
+      ],
+      "realmRoles": ["default-roles-trading", "trader"]
+    },
+    {
+      "username": "bob",
+      "firstName": "Bob",
+      "lastName": "Viewer",
+      "email": "bob@example.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        { "type": "password", "value": "bob", "temporary": false }
+      ],
+      "realmRoles": ["default-roles-trading", "viewer"]
+    }
+  ]
+}
