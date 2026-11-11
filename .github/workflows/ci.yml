@@ -32,7 +32,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg://trading:ci-only-password@localhost:5432/trading
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
       - run: uv sync --locked
