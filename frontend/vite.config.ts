@@ -10,5 +10,7 @@ export default defineConfig({
   test: {
     // Same result on every machine and in CI, whatever the local timezone
     env: { TZ: "UTC" },
+    environment: "jsdom",
+    setupFiles: ["./src/test-setup.ts"],
   },
 });
