@@ -12,22 +12,25 @@ _cash_change = case((Order.side == "buy", -Order.total), else_=Order.total)
 _share_change = case((Order.side == "buy", Order.quantity), else_=-Order.quantity)
 
 
-def get_cash(session: Session) -> Decimal:
-    query = select(func.coalesce(func.sum(_cash_change), 0))
+def get_cash(session: Session, owner_sub: str) -> Decimal:
+    query = select(func.coalesce(func.sum(_cash_change), 0)).where(
+        Order.owner_sub == owner_sub
+    )
     return STARTING_CASH + session.execute(query).scalar_one()
 
 
-def get_position(session: Session, symbol: str) -> int:
+def get_position(session: Session, owner_sub: str, symbol: str) -> int:
     query = select(func.coalesce(func.sum(_share_change), 0)).where(
-        Order.symbol == symbol
+        Order.symbol == symbol, Order.owner_sub == owner_sub
     )
     return session.execute(query).scalar_one()
 
 
-def get_positions(session: Session) -> dict[str, int]:
+def get_positions(session: Session, owner_sub: str) -> dict[str, int]:
     held = func.sum(_share_change)
     query = (
         select(Order.symbol, held)
+        .where(Order.owner_sub == owner_sub)
         .group_by(Order.symbol)
         .having(held != 0)
         .order_by(Order.symbol)

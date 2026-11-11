@@ -20,6 +20,8 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Keycloak user id (the token's `sub`); each user sees only their own orders
+    owner_sub: Mapped[str] = mapped_column(String(64), index=True)
     symbol: Mapped[str] = mapped_column(String(10))
     side: Mapped[str] = mapped_column(String(4))
     quantity: Mapped[int]
