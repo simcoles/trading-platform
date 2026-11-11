@@ -4,9 +4,9 @@ import OrdersBlotter from "./OrdersBlotter";
 import { Alert, Stack } from "@mui/material";
 import OrderTicket from "./OrderTicket";
 
-type Props = { onPlaced: () => void };
+type Props = { onPlaced: () => void; canTrade: boolean };
 
-export default function Orders({ onPlaced }: Props) {
+export default function Orders({ onPlaced, canTrade }: Props) {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,13 @@ export default function Orders({ onPlaced }: Props) {
 
   return (
     <Stack spacing={2}>
-      <OrderTicket onPlaced={handlePlaced} />
+      {canTrade ? (
+        <OrderTicket onPlaced={handlePlaced} />
+      ) : (
+        <Alert severity="info">
+          View only: your account cannot place orders
+        </Alert>
+      )}
       {error && <Alert severity="error">{error}</Alert>}
       <OrdersBlotter orders={orders} />
     </Stack>

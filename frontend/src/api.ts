@@ -1,3 +1,5 @@
+import { getAccessToken } from "./auth";
+
 export const API_URL = "http://127.0.0.1:8000";
 export const WS_URL = `${API_URL.replace(/^http/, "ws")}/ws/prices`;
 // ---- Types: mirror backend/src/backend/models.py ----
@@ -65,7 +67,13 @@ function detailToMessage(detail: ErrorBody["detail"]): string {
 // ---- The one place that calls fetch ----
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
+  const headers = new Headers(init?.headers);
+  const token = getAccessToken();
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
 
   if (!response.ok) {
     let message = `${response.status} ${response.statusText}`; // fallback
