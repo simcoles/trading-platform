@@ -12,6 +12,7 @@ A full-stack **simulated** trading platform: live streaming prices, order entry,
 - **Order entry.** An order ticket (symbol, buy or sell, quantity) places simulated orders. A blotter grid lists them newest first, with sorting, filtering and formatted money and times.
 - **Portfolio.** Cash and positions are calculated from the order history. The positions grid and a Highcharts allocation chart revalue holdings on every price tick.
 - **Single sign-on with roles.** Users log in through Keycloak (OpenID Connect, authorization code flow with PKCE). Traders can place orders. Viewers can see the portfolio and orders but not trade. The API enforces this on every request.
+- **Per-user accounts.** Each order records who placed it (the token's `sub`), so every user sees only their own orders and portfolio.
 - **Watchlist.** Symbols you follow, stored in PostgreSQL.
 
 ## Tech stack
@@ -49,6 +50,7 @@ A full-stack **simulated** trading platform: live streaming prices, order entry,
 - **Money is `Decimal`, never `float`.** Amounts are rounded half-up to the cent, and Postgres stores them as `NUMERIC`. The JSON API still sends plain numbers. The fast-moving price feed stays `float`, because it's display-only.
 - **The ledger is append-only.** Cash and positions are not stored. They are calculated from the orders table with `SUM(CASE …)` queries, so the totals can never drift away from the history.
 - **The server enforces access.** The UI hides the order ticket from viewers for a better experience, but the API checks the `trader` role itself and returns 403 otherwise. Tests prove it.
+- **The owner comes from the token, never the request.** Order and portfolio queries filter by the verified user id, so no request parameter can open another user's account.
 - **Tokens are verified locally.** FastAPI caches Keycloak's public keys and checks each token's signature without calling Keycloak. The algorithm is pinned to RS256, and the audience must be `trading-api`.
 - **One shared price stream.** A single broadcaster task feeds every WebSocket client, so all users see the same prices. If a client is slow, it misses a tick rather than holding up the others.
 - **The grids are built for streaming.** AG Grid uses `getRowId`, so a tick updates existing rows instead of rebuilding the table. The chart turns off its intro animation so live updates don't replay it.
@@ -128,7 +130,6 @@ trading-platform/
 
 ## Roadmap
 
-- Per-user accounts: record who placed each order (the token's `sub`) so each user sees only their own portfolio
 - Trading rules: reject buys beyond available cash and sells beyond the shares held (409)
 - A live price line chart
 - Redis pub/sub so the price stream works across several server processes
