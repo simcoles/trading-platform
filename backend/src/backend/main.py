@@ -11,6 +11,7 @@ from backend.config import FRONTEND_ORIGIN
 from backend.exceptions import (
     SymbolAlreadyInWatchlistError,
     SymbolNotInWatchlistError,
+    TradingRuleError,
     UnknownSymbolError,
 )
 from backend.routers import health, orders, portfolio, prices, stream, watchlist
@@ -67,3 +68,9 @@ async def symbol_not_in_watchlist_handler(
     request: Request, exc: SymbolNotInWatchlistError
 ):
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+# One handler for every trading rule: subclasses of TradingRuleError match too
+@app.exception_handler(TradingRuleError)
+async def trading_rule_handler(request: Request, exc: TradingRuleError):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})

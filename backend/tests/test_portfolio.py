@@ -1,5 +1,8 @@
 from decimal import Decimal
 
+import pytest
+
+from backend.exceptions import InsufficientSharesError
 from backend.orders import place_order
 from backend.portfolio import STARTING_CASH, get_cash, get_position, get_positions
 
@@ -45,3 +48,9 @@ def test_users_only_see_their_own_orders(session):
     assert get_positions(session, OWNER) == {"AAPL": 10}
     assert get_positions(session, "user-b") == {"GOOGL": 1}
     assert get_cash(session, "user-b") == STARTING_CASH - Decimal("2800.00")
+
+
+def test_shares_held_by_another_user_cannot_be_sold(session):
+    place_order(session, "user-b", "AAPL", "buy", 10)
+    with pytest.raises(InsufficientSharesError):
+        place_order(session, OWNER, "AAPL", "sell", 1)
