@@ -268,7 +268,11 @@ GitHub and CI (done 2026-11-11): public repo https://github.com/simcoles/trading
 
 Workflow: feature branches with pull requests (`gh pr create --fill`, `gh pr checks --watch`, `gh pr merge --squash --delete-branch`); CI runs on the PR and again on `main` after merge.
 
-Next: trading rules (item 6), or the live price line chart (item 4).
+Done since (2026-11-12): trading rules (PR #2), the live price line chart (PR #3), README performance section (PR #4), working `.env.example` defaults (PR #5).
+
+Done (2026-11-12): live prices moved out of React. `src/priceStore.ts` replaces `useLivePrices.ts`: `createPriceStore(createSocket)` owns the WebSocket, backoff and `{ prices, history, status }`; `subscribe` opens the socket for the first listener and closes it (handlers detached first, so no reconnect) for the last; `setState` replaces only changed slices, so `usePrices`/`usePriceHistory`/`useLiveStatus` (`useSyncExternalStore`) re-render only their own consumers. `App` no longer re-renders on ticks; `PriceGrid`, `LivePriceChart` and `Portfolio` subscribe themselves. `priceStore.test.ts` uses a fake socket injected through `createSocket`. Five more symbols (MSFT, NVDA, TSLA, META, JPM) in `pricing.prices` and `OrderTicket`'s `SYMBOLS` (kept in step by hand). 72 backend tests, 16 frontend tests.
+
+Next: per-symbol selectors or `applyTransactionAsync`, Redis, or deployment.
 
 Later: Redis, CI deployment, and possibly replacing the hard-coded `prices` with live prices when filling orders.
 
