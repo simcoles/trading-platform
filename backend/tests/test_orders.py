@@ -17,8 +17,8 @@ def test_create_order_buy(client):
         "symbol": "AAPL",
         "quantity": 10,
         "side": "buy",
-        "price": 150.0,
-        "total": 1500.0,
+        "price": 150.15,  # the ask: mid 150.00 + 0.1%
+        "total": 1501.50,
     }
 
 
@@ -37,9 +37,18 @@ def test_create_order_sell(client):
         "symbol": "GOOGL",
         "quantity": 10,
         "side": "sell",
-        "price": 2800.0,
-        "total": 28000.0,
+        "price": 2797.20,  # the bid: mid 2800.00 - 0.1%
+        "total": 27972.00,
     }
+
+
+def test_order_fills_at_the_live_price(client, market):
+    market.current_prices["AAPL"] = 200.00  # the market has moved
+    response = client.post(
+        "/orders", json={"symbol": "AAPL", "quantity": 1, "side": "buy"}
+    )
+    assert response.status_code == 201
+    assert response.json()["price"] == 200.20  # ask on the new mid, not 150
 
 
 def test_create_order_unknown_symbol_returns_404(client):
@@ -90,7 +99,7 @@ def test_buy_beyond_cash_returns_409(client):
     )
     assert response.status_code == 409
     assert response.json() == {
-        "detail": "Insufficient cash: order costs 112000.00 but only 100000.00 is available"
+        "detail": "Insufficient cash: order costs 112112.00 but only 100000.00 is available"
     }
 
 

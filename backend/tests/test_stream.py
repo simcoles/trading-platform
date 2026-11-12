@@ -11,7 +11,9 @@ def test_first_message_has_all_symbols(client):
     with client.websocket_connect("/ws/prices", headers=ALLOWED_HEADERS) as ws:
         data = ws.receive_json()
     assert set(data.keys()) == set(prices.keys())
-    assert all(isinstance(price, (int, float)) and price > 0 for price in data.values())
+    for quote in data.values():
+        assert set(quote) == {"bid", "mid", "ask"}
+        assert 0 < quote["bid"] < quote["mid"] < quote["ask"]
 
 
 @pytest.mark.parametrize(

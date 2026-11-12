@@ -1,3 +1,4 @@
+import random
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -9,9 +10,11 @@ from sqlalchemy import Engine, create_engine, make_url
 from sqlalchemy.orm import Session
 
 from backend.auth import User, get_current_user
+from backend.broadcaster import PriceBroadcaster
 from backend.config import settings
 from backend.db import get_session
 from backend.main import app
+from backend.routers.orders import get_market
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -47,9 +50,17 @@ def session(engine: Engine) -> Iterator[Session]:
 
 
 @pytest.fixture()
-def client(session: Session) -> Iterator[TestClient]:
+def market() -> PriceBroadcaster:
+    """A market that never ticks, so mids stay at the starting prices
+    (AAPL 150.00 → bid 149.85 / ask 150.15). Tests can set current_prices."""
+    return PriceBroadcaster(random.Random(0))
+
+
+@pytest.fixture()
+def client(session: Session, market: PriceBroadcaster) -> Iterator[TestClient]:
     app.dependency_overrides[get_session] = lambda: session
     app.dependency_overrides[get_current_user] = lambda: TEST_TRADER
+    app.dependency_overrides[get_market] = lambda: market
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()

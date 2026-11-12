@@ -5,31 +5,27 @@ import type {
   ValueFormatterParams,
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import type { PriceResponse } from "./api";
-import { useLiveStatus, usePrices } from "./priceStore";
+import { useLiveStatus, usePrices, type Quote } from "./priceStore";
+
+const twoDecimals = (p: ValueFormatterParams<Quote, number>) =>
+  p.value == null ? "" : p.value.toFixed(2);
+
+const priceColumn = {
+  type: "rightAligned",
+  valueFormatter: twoDecimals,
+  enableCellChangeFlash: true,
+} satisfies ColDef<Quote>;
 
 // Defined outside the component, so the grid gets the same array on every render
-const columnDefs: ColDef<PriceResponse>[] = [
+const columnDefs: ColDef<Quote>[] = [
   { field: "symbol", headerName: "Symbol" },
-  {
-    field: "price",
-    headerName: "Price",
-    valueFormatter: (p: ValueFormatterParams<PriceResponse, number>) => {
-      if (p.value === null || p.value === undefined) {
-        return "";
-      }
-      return p.value.toFixed(2);
-    },
-    type: "rightAligned",
-    enableCellChangeFlash: true,
-  },
-  {
-    field: "currency",
-    headerName: "Currency",
-  },
+  // Sellers receive the bid, buyers pay the ask
+  { ...priceColumn, field: "bid", headerName: "Bid (USD)" },
+  { ...priceColumn, field: "ask", headerName: "Ask (USD)" },
+  { ...priceColumn, field: "mid", headerName: "Mid (USD)" },
 ];
 
-function getRowId(params: GetRowIdParams<PriceResponse>): string {
+function getRowId(params: GetRowIdParams<Quote>): string {
   return params.data.symbol;
 }
 
@@ -57,7 +53,7 @@ export default function PriceGrid() {
       {status === "closed" && (
         <Alert severity="error">Connection to live prices closed</Alert>
       )}
-      <AgGridReact<PriceResponse>
+      <AgGridReact<Quote>
         rowData={prices}
         columnDefs={columnDefs}
         getRowId={getRowId}

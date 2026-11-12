@@ -1,8 +1,9 @@
 from decimal import ROUND_HALF_UP, Decimal
 
 from backend.exceptions import UnknownSymbolError
-from backend.models import Currency
+from backend.models import Currency, Side
 
+# Starting mid prices for the simulation; live prices come from the broadcaster
 prices = {
     "AAPL": Decimal("150.00"),
     "GOOGL": Decimal("2800.00"),
@@ -16,6 +17,8 @@ prices = {
 
 USD_TO_GBP_RATE = Decimal("0.79")  # Example conversion rate from USD to GBP
 CENT = Decimal("0.01")
+# Bid and ask sit 0.1% either side of the mid, so the spread is 0.2%
+HALF_SPREAD = Decimal("0.001")
 
 
 def round_money(amount: Decimal) -> Decimal:
@@ -38,3 +41,13 @@ def look_up_price(symbol: str) -> Decimal:
 
 def calculate_total(price: Decimal, quantity: int) -> Decimal:
     return round_money(price * quantity)
+
+
+def bid_ask(mid: Decimal) -> tuple[Decimal, Decimal]:
+    return round_money(mid * (1 - HALF_SPREAD)), round_money(mid * (1 + HALF_SPREAD))
+
+
+def fill_price(mid: Decimal, side: Side) -> Decimal:
+    """Buyers pay the ask, sellers receive the bid."""
+    bid, ask = bid_ask(mid)
+    return ask if side == "buy" else bid

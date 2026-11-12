@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -5,15 +7,20 @@ from backend.exceptions import InsufficientCashError, InsufficientSharesError
 from backend.models import Side
 from backend.orm import Order
 from backend.portfolio import get_cash, get_position
-from backend.pricing import calculate_total, look_up_price
+from backend.pricing import calculate_total
 
 
 def place_order(
-    session: Session, owner_sub: str, symbol: str, side: Side, quantity: int
+    session: Session,
+    owner_sub: str,
+    symbol: str,
+    side: Side,
+    quantity: int,
+    price: Decimal,
 ) -> Order:
+    """Record a fill at `price`. The caller decides the price (the live
+    bid or ask), so this function stays pure and easy to test."""
     symbol = symbol.upper()
-    # raises UnknownSymbolError if symbol is not found
-    price = look_up_price(symbol)
     total = calculate_total(price, quantity)
 
     # Check the rules before saving, so a rejected order is never written.

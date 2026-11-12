@@ -2,20 +2,25 @@
 // they need with useSyncExternalStore, so a tick re-renders the price
 // consumers only, not App and everything below it.
 import { useSyncExternalStore } from "react";
-import { WS_URL, type PriceResponse } from "./api";
+import { WS_URL } from "./api";
 import { appendTick, emptyHistory, type PriceHistory } from "./priceHistory";
 
 const BASE_DELAY_MS = 500; // 0.5 seconds
 const MAX_DELAY_MS = 10_000; // 10 seconds
 const MAX_ATTEMPTS = 8; // Maximum number of reconnection attempts
 
-// What the server sends: {"AAPL": 150.42, ...}
-type PriceTick = Record<string, number>;
+type QuoteValues = { bid: number; mid: number; ask: number };
+
+// What the server sends: {"AAPL": {"bid": 149.85, "mid": 150, "ask": 150.15}, ...}
+type QuoteTick = Record<string, QuoteValues>;
+
+// One row per symbol. Buys fill at the ask, sells at the bid
+export type Quote = { symbol: string } & QuoteValues;
 
 export type LiveStatus = "connecting" | "reconnecting" | "open" | "closed";
 
 export type LiveState = {
-  prices: PriceResponse[];
+  prices: Quote[];
   history: PriceHistory;
   status: LiveStatus;
 };
@@ -26,12 +31,15 @@ const initialState: LiveState = {
   status: "connecting",
 };
 
-function tickToRows(tick: PriceTick): PriceResponse[] {
-  return Object.entries(tick).map(([symbol, price]) => ({
-    symbol,
-    price,
-    currency: "USD",
-  }));
+function tickToRows(tick: QuoteTick): Quote[] {
+  return Object.entries(tick).map(([symbol, quote]) => ({ symbol, ...quote }));
+}
+
+// The chart plots the mid
+function midsOf(tick: QuoteTick): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(tick).map(([symbol, quote]) => [symbol, quote.mid]),
+  );
 }
 
 function backoffDelay(attempt: number): number {
@@ -66,10 +74,10 @@ export function createPriceStore(
     };
 
     ws.onmessage = (event: MessageEvent<string>) => {
-      const tick: PriceTick = JSON.parse(event.data);
+      const tick: QuoteTick = JSON.parse(event.data);
       setState({
         prices: tickToRows(tick),
-        history: appendTick(state.history, tick, Date.now()),
+        history: appendTick(state.history, midsOf(tick), Date.now()),
       });
     };
 
@@ -116,7 +124,7 @@ export type PriceStore = ReturnType<typeof createPriceStore>;
 export const priceStore = createPriceStore();
 
 // Each hook re-renders its component only when its own slice changes
-export function usePrices(): PriceResponse[] {
+export function usePrices(): Quote[] {
   return useSyncExternalStore(
     priceStore.subscribe,
     () => priceStore.getState().prices,

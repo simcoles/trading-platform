@@ -3,7 +3,27 @@ from decimal import Decimal
 import pytest
 
 from backend.exceptions import UnknownSymbolError
-from backend.pricing import calculate_total, convert_price, look_up_price
+from backend.pricing import (
+    bid_ask,
+    calculate_total,
+    convert_price,
+    fill_price,
+    look_up_price,
+)
+
+
+def test_bid_ask_straddle_the_mid():
+    assert bid_ask(Decimal("150.00")) == (Decimal("149.85"), Decimal("150.15"))
+
+
+def test_bid_ask_round_half_up_to_the_cent():
+    # 123.45 × 0.999 = 123.32655 and × 1.001 = 123.57345
+    assert bid_ask(Decimal("123.45")) == (Decimal("123.33"), Decimal("123.57"))
+
+
+def test_buys_fill_at_the_ask_and_sells_at_the_bid():
+    assert fill_price(Decimal("150.00"), "buy") == Decimal("150.15")
+    assert fill_price(Decimal("150.00"), "sell") == Decimal("149.85")
 
 
 def test_convert_price_rounds_usd():
