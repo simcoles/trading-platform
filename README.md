@@ -4,12 +4,12 @@
 
 A full-stack **simulated** trading platform: live streaming prices, order entry, a portfolio valued in real time, and role-based access through single sign-on. It is a learning project, built step by step to expand Python knowledge and backend engineering coming from React and TypeScript.
 
-> **Everything is simulated.** Prices are a random walk, orders fill instantly at the simulated price, and nothing connects to a real broker or real money.
+> **Everything is simulated.** Prices are a random walk, orders fill instantly at the live simulated bid or ask, and nothing connects to a real broker or real money.
 
 ## What it does
 
-- **Live prices.** A background task moves prices every second, and a WebSocket pushes each tick to every connected browser. AG Grid updates the cells in place and flashes them when they change.
-- **Order entry.** An order ticket (symbol, buy or sell, quantity) places simulated orders. A blotter grid lists them newest first, with sorting, filtering and formatted money and times.
+- **Live prices.** A background task moves a mid price every second, and the server quotes a bid and ask 0.1% either side (a 0.2% spread). A WebSocket pushes each tick of quotes to every connected browser. AG Grid updates the cells in place and flashes them when they change.
+- **Order entry.** An order ticket (symbol, buy or sell, quantity) places simulated orders. They fill at the live price when the order reaches the server: buys at the ask, sells at the bid. The price is calculated with `Decimal` on the server, never sent by the browser. A blotter grid lists them newest first, with sorting, filtering and formatted money and times.
 - **Portfolio.** Cash and positions are calculated from the order history. The positions grid and a Highcharts allocation chart revalue holdings on every price tick.
 - **Single sign-on with roles.** Users log in through Keycloak (OpenID Connect, authorization code flow with PKCE). Traders can place orders. Viewers can see the portfolio and orders but not trade. The API enforces this on every request.
 - **Per-user accounts.** Each order records who placed it (the token's `sub`), so every user sees only their own orders and portfolio.

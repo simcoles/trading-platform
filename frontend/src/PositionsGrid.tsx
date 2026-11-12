@@ -37,7 +37,7 @@ const columnDefs: ColDef<Row>[] = [
   },
   {
     field: "price",
-    headerName: "Price",
+    headerName: "Mid price",
     type: "rightAligned",
     valueFormatter: money,
     enableCellChangeFlash: true,

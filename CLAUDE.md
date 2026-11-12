@@ -272,9 +272,11 @@ Done since (2026-11-12): trading rules (PR #2), the live price line chart (PR #3
 
 Done (2026-11-12): live prices moved out of React. `src/priceStore.ts` replaces `useLivePrices.ts`: `createPriceStore(createSocket)` owns the WebSocket, backoff and `{ prices, history, status }`; `subscribe` opens the socket for the first listener and closes it (handlers detached first, so no reconnect) for the last; `setState` replaces only changed slices, so `usePrices`/`usePriceHistory`/`useLiveStatus` (`useSyncExternalStore`) re-render only their own consumers. `App` no longer re-renders on ticks; `PriceGrid`, `LivePriceChart` and `Portfolio` subscribe themselves. `priceStore.test.ts` uses a fake socket injected through `createSocket`. Five more symbols (MSFT, NVDA, TSLA, META, JPM) in `pricing.prices` and `OrderTicket`'s `SYMBOLS` (kept in step by hand). 72 backend tests, 16 frontend tests.
 
-Next: per-symbol selectors or `applyTransactionAsync`, Redis, or deployment.
+Done (2026-11-12): orders fill at live bid/ask. `pricing.py` has `HALF_SPREAD = Decimal("0.001")`, `bid_ask(mid)` and `fill_price(mid, side)` (buy at ask, sell at bid); `pricing.prices` are now only the starting mids. `PriceBroadcaster` computes `current_quotes` (`{symbol: {bid, mid, ask}}`) once per tick and broadcasts those; `mid_price(symbol)` returns the live mid as a `Decimal` (via `str`) and raises `UnknownSymbolError`. `routers/orders.py` has a `get_market` dependency (`MarketDep`); the route works out the fill price and passes it to `place_order(..., price)`, which no longer looks prices up. `conftest.py` has a `market` fixture (a `PriceBroadcaster` that never ticks) overriding `get_market`, so fills are deterministic (AAPL ask 150.15); `test_order_fills_at_the_live_price` moves the mid. Frontend: `Quote` rows `{symbol, bid, mid, ask}` in `priceStore`; `PriceGrid` shows Bid/Ask/Mid; chart and portfolio use the mid. `GET /prices` still returns the starting mids. 76 backend tests, 16 frontend tests.
 
-Later: Redis, CI deployment, and possibly replacing the hard-coded `prices` with live prices when filling orders.
+Next: show the indicative bid/ask in the order ticket, per-symbol selectors or `applyTransactionAsync`, Redis, or deployment.
+
+Later: Redis, CI deployment, and making `GET /prices` return live quotes too.
 
 ## Longer-term roadmap
 

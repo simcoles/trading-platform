@@ -16,10 +16,10 @@ async def stream_prices(websocket: WebSocket) -> None:
     await websocket.accept()
     queue = broadcaster.subscribe()
     try:
-        await websocket.send_json(broadcaster.current_prices)
+        await websocket.send_json(broadcaster.current_quotes)
         while True:
-            prices = await queue.get()
-            await websocket.send_json(prices)
+            quotes = await queue.get()
+            await websocket.send_json(quotes)
     except WebSocketDisconnect:
         pass
     finally:

@@ -34,10 +34,11 @@ export default function Portfolio({ refreshKey }: Props) {
     };
   }, [refreshKey]);
 
-  // Positions valued at live prices; recomputed on each tick or portfolio change
+  // Positions marked to the live mid price; recomputed on each tick or
+  // portfolio change. (Valuing at the bid would show what selling would raise.)
   const holdings = useMemo(() => {
     if (portfolio === null) return [];
-    const priceBySymbol = new Map(prices.map((p) => [p.symbol, p.price]));
+    const priceBySymbol = new Map(prices.map((p) => [p.symbol, p.mid]));
     return portfolio.positions.map((position) => {
       const price = priceBySymbol.get(position.symbol) ?? 0;
       return { ...position, price, marketValue: position.quantity * price };

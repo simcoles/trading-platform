@@ -11,7 +11,14 @@ class FakeSocket {
   open() {
     this.onopen?.();
   }
-  send(tick: Record<string, number>) {
+  // Takes mids and sends quotes 1.00 either side, in the server's format
+  send(mids: Record<string, number>) {
+    const tick = Object.fromEntries(
+      Object.entries(mids).map(([symbol, mid]) => [
+        symbol,
+        { bid: mid - 1, mid, ask: mid + 1 },
+      ]),
+    );
     this.onmessage?.({ data: JSON.stringify(tick) });
   }
   drop() {
@@ -44,15 +51,15 @@ describe("priceStore", () => {
     expect(sockets).toHaveLength(1);
   });
 
-  it("turns a tick into price rows and history", () => {
+  it("turns a tick into quote rows, and the mids into history", () => {
     const { store, sockets } = setup();
     store.subscribe(() => {});
 
     sockets[0].send({ AAPL: 150, MSFT: 420 });
 
     expect(store.getState().prices).toEqual([
-      { symbol: "AAPL", price: 150, currency: "USD" },
-      { symbol: "MSFT", price: 420, currency: "USD" },
+      { symbol: "AAPL", bid: 149, mid: 150, ask: 151 },
+      { symbol: "MSFT", bid: 419, mid: 420, ask: 421 },
     ]);
     expect(store.getState().history.start).toEqual({ AAPL: 150, MSFT: 420 });
   });
