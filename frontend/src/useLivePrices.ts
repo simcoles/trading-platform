@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { WS_URL, type PriceResponse } from "./api";
+import { appendTick, emptyHistory, type PriceHistory } from "./priceHistory";
 
 const BASE_DELAY_MS = 500; // 0.5 seconds
 const MAX_DELAY_MS = 10_000; // 10 seconds
@@ -26,9 +27,11 @@ function backoffDelay(attempt: number): number {
 
 export function useLivePrices(): {
   prices: PriceResponse[];
+  history: PriceHistory;
   status: LiveStatus;
 } {
   const [prices, setPrices] = useState<PriceResponse[]>([]);
+  const [history, setHistory] = useState<PriceHistory>(emptyHistory);
   const [status, setStatus] = useState<LiveStatus>("connecting");
 
   useEffect(() => {
@@ -50,6 +53,9 @@ export function useLivePrices(): {
         const tick: PriceTick = JSON.parse(event.data);
         if (!ignore) {
           setPrices(tickToRows(tick));
+          // Timestamp on arrival, in the event handler (not during render)
+          const now = Date.now();
+          setHistory((previous) => appendTick(previous, tick, now));
         }
       };
 
@@ -75,5 +81,5 @@ export function useLivePrices(): {
     };
   }, []);
 
-  return { prices, status };
+  return { prices, history, status };
 }

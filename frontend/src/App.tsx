@@ -2,6 +2,7 @@ import { Alert, Button, Container, Stack, Typography } from "@mui/material";
 import { useState } from "react";
 import { useAuth } from "react-oidc-context";
 import { rolesOf } from "./auth";
+import LivePriceChart from "./LivePriceChart";
 import Orders from "./Orders";
 import Portfolio from "./Portfolio";
 import PriceGrid from "./PriceGrid";
@@ -11,7 +12,7 @@ import Watchlist from "./Watchlist";
 function App() {
   const auth = useAuth();
   // One WebSocket for the whole app, shared by everything that needs prices
-  const { prices, status } = useLivePrices();
+  const { prices, history, status } = useLivePrices();
   // Bumped after each order so Portfolio knows to refetch
   const [ordersVersion, setOrdersVersion] = useState(0);
 
@@ -47,6 +48,7 @@ function App() {
           Prices
         </Typography>
         <PriceGrid prices={prices} status={status} />
+        <LivePriceChart history={history} />
 
         {auth.error && (
           <Alert severity="error">Sign-in failed: {auth.error.message}</Alert>
