@@ -99,13 +99,13 @@ These are deliberate trade-offs for a simulator with a handful of symbols. Each 
 Prerequisites: Docker, [uv](https://docs.astral.sh/uv/) and Node 26.
 
 ```bash
-cp .env.example .env              # then fill in local values (see below)
+cp .env.example .env              # working local defaults, no editing needed
 docker compose up -d --wait       # PostgreSQL and Keycloak
 uv run --directory backend alembic upgrade head
-docker compose exec db createdb -U <POSTGRES_USER> trading_test   # once, for the tests
+docker compose exec db createdb -U trading trading_test   # once, for the tests
 ```
 
-`.env` needs `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`, `KEYCLOAK_ADMIN_USER` and `KEYCLOAK_ADMIN_PASSWORD`. For example, `DATABASE_URL=postgresql+psycopg://<user>:<password>@localhost:5433/trading`. The file is ignored by Git.
+`.env.example` has working defaults for local Docker. They aren't secrets, because the containers only listen on `127.0.0.1`. If you change the Postgres user, password or database, update `DATABASE_URL` to match (and use your user in the `createdb` command). `.env` is ignored by Git. The Keycloak admin console is at http://localhost:8080 (`admin`/`admin`).
 
 Run the servers in two terminals:
 
