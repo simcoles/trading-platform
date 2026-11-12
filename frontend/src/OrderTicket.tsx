@@ -11,7 +11,8 @@ import { useState, type SubmitEvent } from "react";
 import { placeOrder, type OrderResponse, type Side } from "./api";
 import { formatMoney } from "./format";
 
-const SYMBOLS = ["AAPL", "GOOGL", "AMZN"];
+// Keep in step with `prices` in backend/src/backend/pricing.py
+const SYMBOLS = ["AAPL", "GOOGL", "AMZN", "MSFT", "NVDA", "TSLA", "META", "JPM"];
 
 type Props = { onPlaced: (order: OrderResponse) => void };
 

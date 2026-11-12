@@ -39,8 +39,16 @@ def test_list_prices_defaults_to_usd(client):
     response = client.get("/prices")
     assert response.status_code == 200
     prices = response.json()
-    assert len(prices) == 3
-    assert prices[0]["symbol"] == "AAPL"
+    assert [price["symbol"] for price in prices] == [
+        "AAPL",
+        "GOOGL",
+        "AMZN",
+        "MSFT",
+        "NVDA",
+        "TSLA",
+        "META",
+        "JPM",
+    ]
     assert prices[0]["currency"] == "USD"
     assert prices[0]["price"] == 150.0  # AAPL price in USD
 

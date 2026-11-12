@@ -69,7 +69,7 @@ The app streams a price tick every second to every browser, so most of the perfo
 
 ### Rendering (frontend)
 
-- **One socket per tab.** `App` owns the only `useLivePrices()` call and passes prices down, so the price grid, portfolio, positions and charts share one connection.
+- **Live prices live outside React.** `priceStore.ts` is a small external store that owns the one WebSocket per tab, its reconnect logic and the `{ prices, history, status }` state. Components subscribe to just the slice they need through `useSyncExternalStore` (`usePrices`, `usePriceHistory`, `useLiveStatus`). Each update replaces only the slices that changed, so React re-renders a component only when its own slice changes. A tick re-renders the price grid, the line chart and the portfolio, but not `App`, the orders or the watchlist. A status change doesn't re-render the chart. The socket opens with the first subscriber and closes when the last one leaves.
 - **Grids update rows in place.** Every grid sets `getRowId` (the symbol, or the order id), so AG Grid diffs each tick against existing rows and only touches cells that changed. It doesn't rebuild the DOM, and the cell flash works because the row keeps its identity. `columnDefs` live at module level, so the grid gets the same array on every render and doesn't reinitialise its columns.
 - **Derived data is memoised.** Live position values (`Portfolio`), weights (`PositionsGrid`) and Highcharts `options` (both charts) are wrapped in `useMemo`, keyed on the data they depend on. They are recalculated once per tick, not on every unrelated render.
 - **Charts skip animation.** `animation: false` stops Highcharts replaying its intro animation every second. The line chart also hides point markers.
@@ -87,7 +87,7 @@ The app streams a price tick every second to every browser, so most of the perfo
 
 These are deliberate trade-offs for a simulator with a handful of symbols. Each one would be the next step at a larger scale:
 
-- **Every tick re-renders the whole `App` tree.** Price state lives in `App`, so sections that don't use prices (watchlist, orders) re-render too. They are cheap today. At scale, I'd move prices into a store with selector subscriptions (`useSyncExternalStore`, Zustand), so each component re-renders only when its own slice changes. Or I'd push ticks straight into AG Grid with `applyTransactionAsync`, bypassing React.
+- **Price consumers still re-render as a whole on each tick.** The store keeps `App` and unrelated sections out of the render, but `Portfolio` re-renders on every tick, because its whole price list is a new array. Finer-grained options: selectors per symbol, so a component only wakes when its own symbols move, or pushing ticks straight into AG Grid with `applyTransactionAsync`, bypassing React for the grid entirely.
 - **The line chart rebuilds its series each tick.** For a few symbols × 120 points that's negligible. At higher frequencies, I'd keep a chart ref and call `series.addPoint(point, true, shift)`, so Highcharts appends one point instead of diffing the whole series.
 - **Ticks are full snapshots.** Every message carries every symbol. With hundreds of symbols, I'd send only what changed, and let clients subscribe to the symbols they show.
 - **The ledger is recomputed on every read.** Summing the order history is simple and can't drift, but it grows with order count. The usual fix is a positions table or a materialised snapshot, updated in the same transaction as each order.
@@ -157,7 +157,7 @@ trading-platform/
 ├── frontend/src/
 │   ├── App.tsx, auth.ts     # layout, sign-in, roles
 │   ├── api.ts               # the only module that calls fetch
-│   ├── useLivePrices.ts     # WebSocket hook with reconnect backoff
+│   ├── priceStore.ts        # live prices: WebSocket store + useSyncExternalStore hooks
 │   ├── PriceGrid, OrdersBlotter, PositionsGrid   # AG Grid
 │   ├── AllocationChart.tsx  # Highcharts
 │   └── OrderTicket.tsx (+ .test.tsx)

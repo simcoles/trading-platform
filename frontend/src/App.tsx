@@ -6,13 +6,12 @@ import LivePriceChart from "./LivePriceChart";
 import Orders from "./Orders";
 import Portfolio from "./Portfolio";
 import PriceGrid from "./PriceGrid";
-import { useLivePrices } from "./useLivePrices";
 import Watchlist from "./Watchlist";
 
 function App() {
   const auth = useAuth();
-  // One WebSocket for the whole app, shared by everything that needs prices
-  const { prices, history, status } = useLivePrices();
+  // No price state here: components that need prices subscribe to
+  // priceStore themselves, so a tick doesn't re-render App
   // Bumped after each order so Portfolio knows to refetch
   const [ordersVersion, setOrdersVersion] = useState(0);
 
@@ -47,8 +46,8 @@ function App() {
         <Typography variant="h5" component="h2">
           Prices
         </Typography>
-        <PriceGrid prices={prices} status={status} />
-        <LivePriceChart history={history} />
+        <PriceGrid />
+        <LivePriceChart />
 
         {auth.error && (
           <Alert severity="error">Sign-in failed: {auth.error.message}</Alert>
@@ -71,7 +70,7 @@ function App() {
             <Typography variant="h5" component="h2">
               Portfolio
             </Typography>
-            <Portfolio prices={prices} refreshKey={ordersVersion} />
+            <Portfolio refreshKey={ordersVersion} />
 
             <Typography variant="h5" component="h2">
               Orders

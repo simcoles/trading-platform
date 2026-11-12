@@ -7,6 +7,11 @@ prices = {
     "AAPL": Decimal("150.00"),
     "GOOGL": Decimal("2800.00"),
     "AMZN": Decimal("3400.00"),
+    "MSFT": Decimal("420.00"),
+    "NVDA": Decimal("180.00"),
+    "TSLA": Decimal("250.00"),
+    "META": Decimal("600.00"),
+    "JPM": Decimal("240.00"),
 }
 
 USD_TO_GBP_RATE = Decimal("0.79")  # Example conversion rate from USD to GBP

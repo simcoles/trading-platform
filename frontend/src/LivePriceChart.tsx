@@ -1,11 +1,11 @@
 import { Chart, type ChartOptions } from "@highcharts/react";
 import { Accessibility } from "@highcharts/react/modules/Accessibility";
 import { useMemo } from "react";
-import { percentChange, type PriceHistory } from "./priceHistory";
+import { percentChange } from "./priceHistory";
+import { usePriceHistory } from "./priceStore";
 
-type Props = { history: PriceHistory };
-
-export default function LivePriceChart({ history }: Props) {
+export default function LivePriceChart() {
+  const history = usePriceHistory();
   // Rebuilt once per tick. Fine for a few symbols x 120 points; at higher
   // rates you'd keep a chart ref and call series.addPoint(point, true, shift)
   const options = useMemo<ChartOptions>(

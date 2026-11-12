@@ -1,17 +1,15 @@
 import { Alert, Stack, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import AllocationChart from "./AllocationChart";
-import {
-  getPortfolio,
-  type PortfolioResponse,
-  type PriceResponse,
-} from "./api";
+import { getPortfolio, type PortfolioResponse } from "./api";
 import { formatMoney } from "./format";
 import PositionsGrid from "./PositionsGrid";
+import { usePrices } from "./priceStore";
 
-type Props = { prices: PriceResponse[]; refreshKey: number };
+type Props = { refreshKey: number };
 
-export default function Portfolio({ prices, refreshKey }: Props) {
+export default function Portfolio({ refreshKey }: Props) {
+  const prices = usePrices();
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
