@@ -56,6 +56,44 @@ A full-stack **simulated** trading platform: live streaming prices, order entry,
 - **The grids are built for streaming.** AG Grid uses `getRowId`, so a tick updates existing rows instead of rebuilding the table. The chart turns off its intro animation so live updates don't replay it.
 - **Accessibility counts.** Buy and sell are shown by text as well as colour, controls have accessible names, the Highcharts accessibility module is loaded, and the component tests query by role and label.
 
+## Performance
+
+The app streams a price tick every second to every browser, so most of the performance work is about keeping each tick cheap from end to end.
+
+### Streaming (backend)
+
+- **One simulation, fanned out.** A single `PriceBroadcaster` task computes each tick once and hands the same dict to every subscriber. The cost of the simulation doesn't grow with the number of clients. Only the send does.
+- **Slow clients can't stall fast ones.** Each WebSocket gets an `asyncio.Queue(maxsize=1)`. If a client hasn't read the last tick yet, the broadcaster drops the stale tick and puts in the new one (`get_nowait` / `put_nowait`). It never `await`s a client, so memory per client is bounded at one tick, and a stalled browser only falls behind itself.
+- **Nothing blocks the event loop.** The stream is fully `async` and uses `asyncio.sleep`, never `time.sleep`. (A blocking `time.sleep` in the stream loop was tried as an experiment: it froze `/health` for every client until the stream stopped.) Routes that use the synchronous SQLAlchemy session are plain `def`, so FastAPI runs them in its thread pool instead of on the event loop.
+- **A snapshot on connect.** A new client gets `current_prices` straight away instead of waiting up to a second for the next tick.
+
+### Rendering (frontend)
+
+- **One socket per tab.** `App` owns the only `useLivePrices()` call and passes prices down, so the price grid, portfolio, positions and charts share one connection.
+- **Grids update rows in place.** Every grid sets `getRowId` (the symbol, or the order id), so AG Grid diffs each tick against existing rows and only touches cells that changed. It doesn't rebuild the DOM, and the cell flash works because the row keeps its identity. `columnDefs` live at module level, so the grid gets the same array on every render and doesn't reinitialise its columns.
+- **Derived data is memoised.** Live position values (`Portfolio`), weights (`PositionsGrid`) and Highcharts `options` (both charts) are wrapped in `useMemo`, keyed on the data they depend on. They are recalculated once per tick, not on every unrelated render.
+- **Charts skip animation.** `animation: false` stops Highcharts replaying its intro animation every second. The line chart also hides point markers.
+- **Bounded history.** The line chart keeps a rolling window of 120 points per symbol (`MAX_POINTS`, two minutes). Memory and redraw cost stay flat however long the tab is open. `appendTick` is a pure function with unit tests.
+- **The network is used sparingly.** The portfolio is fetched again only when an order is placed (`refreshKey`), not on every tick. Live revaluation happens in the browser from prices it already has. Reconnects use capped exponential backoff with jitter, so clients don't all retry at the same moment after a server restart.
+
+### Data and auth
+
+- **Totals are computed in the database.** Cash and positions are single `SUM(CASE …)` / `GROUP BY` queries, so only the result crosses the wire, not every order row.
+- **Queries filter on an indexed column.** `orders.owner_sub` has an index, because every order and portfolio query filters by the current user.
+- **Pooled connections.** SQLAlchemy reuses connections from a pool. `pool_pre_ping` throws away dead connections before use, instead of failing the request.
+- **Token checks don't call Keycloak.** `PyJWKClient` caches Keycloak's public keys, so verifying a JWT is a local signature check. Keycloak is contacted again only when a token arrives with an unknown key id, after key rotation.
+
+### Known limits and what I'd do next
+
+These are deliberate trade-offs for a simulator with a handful of symbols. Each one would be the next step at a larger scale:
+
+- **Every tick re-renders the whole `App` tree.** Price state lives in `App`, so sections that don't use prices (watchlist, orders) re-render too. They are cheap today. At scale, I'd move prices into a store with selector subscriptions (`useSyncExternalStore`, Zustand), so each component re-renders only when its own slice changes. Or I'd push ticks straight into AG Grid with `applyTransactionAsync`, bypassing React.
+- **The line chart rebuilds its series each tick.** For a few symbols × 120 points that's negligible. At higher frequencies, I'd keep a chart ref and call `series.addPoint(point, true, shift)`, so Highcharts appends one point instead of diffing the whole series.
+- **Ticks are full snapshots.** Every message carries every symbol. With hundreds of symbols, I'd send only what changed, and let clients subscribe to the symbols they show.
+- **The ledger is recomputed on every read.** Summing the order history is simple and can't drift, but it grows with order count. The usual fix is a positions table or a materialised snapshot, updated in the same transaction as each order.
+- **One process.** The broadcaster lives in the server's memory, so several Uvicorn workers would each run their own simulation. The roadmap item is Redis pub/sub: one publisher, with every worker forwarding to its own clients.
+- **No measurements yet.** The points above come from the design, not from profiling. Next, I'd measure: React Profiler commit times per tick, Chrome Performance traces with many open tabs, and a WebSocket load test (for example, a few thousand `websockets` clients) to find where the send loop saturates.
+
 ## Getting started
 
 Prerequisites: Docker, [uv](https://docs.astral.sh/uv/) and Node 26.
@@ -130,8 +168,6 @@ trading-platform/
 
 ## Roadmap
 
-- Trading rules: reject buys beyond available cash and sells beyond the shares held (409)
-- A live price line chart
 - Redis pub/sub so the price stream works across several server processes
 - Containerised deployment
 
