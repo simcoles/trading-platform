@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/simcoles/trading-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/simcoles/trading-platform/actions/workflows/ci.yml)
 
-A full-stack **simulated** trading platform: live streaming prices, order entry, a portfolio valued in real time, and role-based access through single sign-on. It is a learning project, built step by step to learn Python and backend engineering coming from React and TypeScript.
+A full-stack **simulated** trading platform: live streaming prices, order entry, a portfolio valued in real time, and role-based access through single sign-on. It is a learning project, built step by step to expand Python knowledge and backend engineering coming from React and TypeScript.
 
 > **Everything is simulated.** Prices are a random walk, orders fill instantly at the simulated price, and nothing connects to a real broker or real money.
 
